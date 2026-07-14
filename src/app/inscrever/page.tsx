@@ -171,9 +171,14 @@ export default function InscreverPage() {
         <Link href="/" className="text-sm text-muted hover:text-foreground">
           ← Voltar ao evento
         </Link>
-        <h1 className="mt-3 text-2xl font-black tracking-tight">Checkout</h1>
+        <h1 className="mt-3 text-2xl font-black tracking-tight">Inscrição</h1>
         <p className="text-sm text-muted mt-1">
-          Dados do atleta e forma de pagamento
+          Preencha os dados do atleta e escolha a forma de pagamento. Já se
+          inscreveu?{" "}
+          <Link href="/atleta" className="text-brand-soft underline font-medium">
+            Consulte pelo CPF
+          </Link>
+          .
         </p>
 
         {loading && <p className="mt-8 text-muted">Carregando…</p>}

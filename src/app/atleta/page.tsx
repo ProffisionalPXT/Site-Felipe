@@ -71,6 +71,11 @@ export default function AtletaPage() {
         <p className="text-sm text-muted mt-1 leading-relaxed">
           Sem criar conta: digite o <strong className="text-foreground">CPF</strong>{" "}
           usado na inscrição para ver o status e o comprovante de pagamento.
+          Ainda não se inscreveu?{" "}
+          <Link href="/inscrever" className="text-brand-soft underline font-medium">
+            Ir para Inscrição
+          </Link>
+          .
         </p>
 
         <form
