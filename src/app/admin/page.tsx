@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useCallback, useState } from "react";
+import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import * as XLSX from "xlsx";
 import {
   AdminContactsTab,
@@ -74,6 +74,43 @@ export default function AdminPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [fontMenuOpen, setFontMenuOpen] = useState(false);
   const [colorMenuOpen, setColorMenuOpen] = useState(false);
+  /** Avisos de pagamento / nova inscrição */
+  const [liveAlerts, setLiveAlerts] = useState<
+    { id: string; title: string; body: string; kind: "paid" | "new" }[]
+  >([]);
+  const knownPaidIds = useRef<Set<string> | null>(null);
+  const knownRegIds = useRef<Set<string> | null>(null);
+  const pollPwd = useRef(password);
+
+  useEffect(() => {
+    pollPwd.current = password;
+  }, [password]);
+
+  function playNotifyBeep() {
+    try {
+      const Ctx =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext })
+          .webkitAudioContext;
+      if (!Ctx) return;
+      const ctx = new Ctx();
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = "sine";
+      o.frequency.value = 880;
+      g.gain.value = 0.04;
+      o.connect(g);
+      g.connect(ctx.destination);
+      o.start();
+      o.stop(ctx.currentTime + 0.15);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function dismissAlert(id: string) {
+    setLiveAlerts((prev) => prev.filter((a) => a.id !== id));
+  }
 
   function showSuccess(title: string, message: string) {
     setMsg(message);
@@ -196,6 +233,89 @@ export default function AdminPage() {
     },
     [q, filterStatus, filterCategory, filterShirt]
   );
+
+  // Poll silencioso (sem filtros) para detectar pagamentos / novas inscrições
+  useEffect(() => {
+    if (!authed || !password) return;
+
+    async function pollAlerts() {
+      const pwd = pollPwd.current;
+      if (!pwd) return;
+      try {
+        const res = await fetch("/api/inscricoes/list", {
+          headers: { "x-admin-password": pwd },
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        const regs = (data.registrations || []) as RegistrationRow[];
+        const paidIds = new Set(
+          regs.filter((r) => r.status === "paid").map((r) => r.id)
+        );
+        const allIds = new Set(regs.map((r) => r.id));
+        if (knownPaidIds.current === null) {
+          knownPaidIds.current = paidIds;
+          knownRegIds.current = allIds;
+          return;
+        }
+        const newPaid = regs.filter(
+          (r) => r.status === "paid" && !knownPaidIds.current!.has(r.id)
+        );
+        const newRegs = regs.filter((r) => !knownRegIds.current!.has(r.id));
+        if (newPaid.length > 0) {
+          playNotifyBeep();
+          setLiveAlerts((prev) =>
+            [
+              ...newPaid.map((r) => ({
+                id: `paid-${r.id}-${Date.now()}`,
+                title: "Pagamento confirmado",
+                body: `${r.full_name} · ${r.category} · inscrição paga`,
+                kind: "paid" as const,
+              })),
+              ...prev,
+            ].slice(0, 8)
+          );
+          if (
+            typeof Notification !== "undefined" &&
+            Notification.permission === "granted"
+          ) {
+            newPaid.forEach((r) => {
+              try {
+                new Notification("CorreCronos — pagamento", {
+                  body: `${r.full_name} pagou a inscrição`,
+                });
+              } catch {
+                /* */
+              }
+            });
+          }
+          // Atualiza a tela se o organizador estiver olhando
+          void loadAll(pwd);
+        } else if (newRegs.length > 0) {
+          setLiveAlerts((prev) =>
+            [
+              ...newRegs.slice(0, 3).map((r) => ({
+                id: `new-${r.id}-${Date.now()}`,
+                title: "Nova inscrição",
+                body: `${r.full_name} · aguardando pagamento`,
+                kind: "new" as const,
+              })),
+              ...prev,
+            ].slice(0, 8)
+          );
+          void loadAll(pwd);
+        }
+        knownPaidIds.current = paidIds;
+        knownRegIds.current = allIds;
+      } catch {
+        /* rede */
+      }
+    }
+
+    const t = window.setInterval(() => {
+      void pollAlerts();
+    }, 35_000);
+    return () => window.clearInterval(t);
+  }, [authed, password, loadAll]);
 
   async function saveEvent(
     e?: FormEvent,
@@ -595,6 +715,68 @@ export default function AdminPage() {
             </header>
 
             <main className="flex-1 px-4 md:px-6 lg:px-8 pb-10 pt-4 max-w-6xl w-full mx-auto">
+              {liveAlerts.length > 0 && (
+                <div className="mb-4 space-y-2">
+                  {liveAlerts.map((a) => (
+                    <div
+                      key={a.id}
+                      className={
+                        a.kind === "paid"
+                          ? "flex items-start justify-between gap-3 rounded-xl border border-emerald-400/40 bg-emerald-500/15 px-4 py-3 text-sm"
+                          : "flex items-start justify-between gap-3 rounded-xl border border-sky-400/40 bg-sky-500/15 px-4 py-3 text-sm"
+                      }
+                      role="status"
+                    >
+                      <div>
+                        <p
+                          className={
+                            a.kind === "paid"
+                              ? "font-bold text-emerald-300"
+                              : "font-bold text-sky-300"
+                          }
+                        >
+                          {a.kind === "paid" ? "✓ " : "● "}
+                          {a.title}
+                        </p>
+                        <p className="text-slate-200 mt-0.5">{a.body}</p>
+                      </div>
+                      <div className="flex gap-2 shrink-0">
+                        <button
+                          type="button"
+                          className="text-xs font-semibold text-white/90 underline"
+                          onClick={() => {
+                            setTab("inscritos");
+                            dismissAlert(a.id);
+                          }}
+                        >
+                          Ver
+                        </button>
+                        <button
+                          type="button"
+                          className="text-xs text-muted hover:text-white"
+                          onClick={() => dismissAlert(a.id)}
+                          aria-label="Fechar"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {authed &&
+                typeof Notification !== "undefined" &&
+                Notification.permission === "default" && (
+                  <button
+                    type="button"
+                    className="mb-4 w-full sm:w-auto rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-slate-200 hover:bg-white/10"
+                    onClick={() => void Notification.requestPermission()}
+                  >
+                    Ativar notificações do navegador (avisos de pagamento)
+                  </button>
+                )}
+
               {(msg || error) && (
                 <div
                   className={

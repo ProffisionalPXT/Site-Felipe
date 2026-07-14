@@ -210,24 +210,39 @@ button {
   }
 }
 
-/* Abas legadas (pagamento/cupons/senha) no tema escuro */
+/* Abas legadas no tema escuro — fundos suaves + texto legível */
 .admin-theme .bg-orange-50,
 .admin-theme .bg-slate-50,
 .admin-theme .bg-white,
-.admin-theme .bg-white\/80 {
-  background: rgba(22, 26, 36, 0.75) !important;
+.admin-theme .bg-white\/80,
+.admin-theme .bg-emerald-50,
+.admin-theme .bg-amber-50 {
+  background: rgba(30, 36, 48, 0.95) !important;
 }
 .admin-theme .border-orange-200,
 .admin-theme .border-orange-100,
-.admin-theme .border-border {
-  border-color: rgba(255, 255, 255, 0.1) !important;
+.admin-theme .border-emerald-200,
+.admin-theme .border-amber-200 {
+  border-color: rgba(255, 255, 255, 0.14) !important;
 }
 .admin-theme .text-orange-950,
 .admin-theme .text-orange-900,
+.admin-theme .text-orange-900\/80,
+.admin-theme .text-orange-900\/90,
+.admin-theme .text-orange-900\/70,
+.admin-theme .text-orange-800,
+.admin-theme .text-emerald-900,
+.admin-theme .text-emerald-900\/90,
+.admin-theme .text-emerald-700,
 .admin-theme .text-slate-900,
 .admin-theme .text-slate-800,
-.admin-theme .text-slate-700 {
-  color: #f1f5f9 !important;
+.admin-theme .text-slate-700,
+.admin-theme .text-amber-950 {
+  color: #e2e8f0 !important;
+}
+.admin-theme .bg-orange-100 {
+  background: rgba(0, 0, 0, 0.35) !important;
+  color: #fdba74 !important;
 }
 .admin-theme .shadow-sm {
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35) !important;

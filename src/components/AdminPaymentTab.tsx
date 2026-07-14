@@ -111,50 +111,50 @@ export function AdminPaymentTab({ password, onMessage }: Props) {
 
   return (
     <div className="space-y-6">
-      {/* Guia passo a passo */}
-      <div className="rounded-2xl border border-orange-200 bg-orange-50 p-5 md:p-6 shadow-sm">
+      {/* Guia passo a passo — contraste ok no tema escuro */}
+      <div className="admin-glass rounded-2xl border border-brand/30 p-5 md:p-6">
         <button
           type="button"
           className="flex w-full items-center justify-between gap-3 text-left"
           onClick={() => setHelpOpen((v) => !v)}
         >
           <div>
-            <p className="font-bold text-lg text-orange-950">
+            <p className="font-bold text-lg text-white">
               📖 Como cadastrar o recebimento (leia com calma)
             </p>
-            <p className="text-sm text-orange-900/80 mt-0.5">
+            <p className="text-sm text-muted mt-0.5">
               Passo a passo para o organizador — sem programar
             </p>
           </div>
-          <span className="text-orange-800 text-sm font-medium shrink-0">
+          <span className="text-brand-soft text-sm font-medium shrink-0">
             {helpOpen ? "Ocultar" : "Mostrar"}
           </span>
         </button>
 
         {helpOpen && (
-          <div className="mt-5 space-y-5 text-sm text-orange-950/90 leading-relaxed">
+          <div className="mt-5 space-y-5 text-sm text-slate-200 leading-relaxed">
             <p>
-              O site precisa saber <strong>para quem o dinheiro vai</strong>. Você
+              O site precisa saber <strong className="text-white">para quem o dinheiro vai</strong>. Você
               escolhe um dos dois jeitos abaixo.
             </p>
 
-            <div className="rounded-xl bg-white/80 border border-orange-100 p-4 space-y-2">
-              <p className="font-bold text-base">
+            <div className="rounded-xl bg-white/5 border border-white/15 p-4 space-y-2">
+              <p className="font-bold text-base text-white">
                 Opção A — Recomendada: Mercado Pago (Pix + cartão automático)
               </p>
-              <ol className="list-decimal pl-5 space-y-2">
+              <ol className="list-decimal pl-5 space-y-2 text-slate-300">
                 <li>
                   Abra{" "}
                   <a
                     href="https://www.mercadopago.com.br"
                     target="_blank"
                     rel="noreferrer"
-                    className="text-brand underline font-medium"
+                    className="text-brand-soft underline font-medium"
                   >
                     mercadopago.com.br
                   </a>{" "}
                   e crie conta (ou entre) com o CPF/CNPJ de quem vai{" "}
-                  <strong>receber</strong> o dinheiro da corrida.
+                  <strong className="text-white">receber</strong> o dinheiro da corrida.
                 </li>
                 <li>
                   Confirme os dados e, se o site pedir, complete a verificação da
@@ -166,49 +166,49 @@ export function AdminPaymentTab({ password, onMessage }: Props) {
                     href="https://www.mercadopago.com.br/developers/panel/app"
                     target="_blank"
                     rel="noreferrer"
-                    className="text-brand underline font-medium"
+                    className="text-brand-soft underline font-medium"
                   >
                     Suas integrações (painel de desenvolvedores)
                   </a>
                   .
                 </li>
                 <li>
-                  Clique em <strong>Criar aplicação</strong> → nome ex.:{" "}
+                  Clique em <strong className="text-white">Criar aplicação</strong> → nome ex.:{" "}
                   <em>Inscrições Corrida</em> → tipo pagamento online.
                 </li>
                 <li>
                   Abra a aplicação → copie o{" "}
-                  <strong>Access Token de produção</strong> (começa com{" "}
-                  <code className="bg-orange-100 px-1 rounded text-xs">
+                  <strong className="text-white">Access Token de produção</strong> (começa com{" "}
+                  <code className="bg-black/40 text-brand-soft px-1 rounded text-xs">
                     APP_USR-
                   </code>
                   ). Para testar sem cobrar de verdade, use o token de{" "}
-                  <strong>teste</strong> (
-                  <code className="bg-orange-100 px-1 rounded text-xs">
+                  <strong className="text-white">teste</strong> (
+                  <code className="bg-black/40 text-brand-soft px-1 rounded text-xs">
                     TEST-
                   </code>
                   ).
                 </li>
                 <li>
                   Volte nesta página, escolha{" "}
-                  <strong>“Mercado Pago”</strong>, cole o token, marque Pix e/ou
-                  cartão e clique em <strong>Salvar recebimento</strong>.
+                  <strong className="text-white">“Mercado Pago”</strong>, cole o token, marque Pix e/ou
+                  cartão e clique em <strong className="text-white">Salvar recebimento</strong>.
                 </li>
               </ol>
-              <p className="text-xs text-orange-900/70 pt-1">
+              <p className="text-xs text-amber-200/90 pt-1">
                 ⚠️ Não compartilhe o Access Token no WhatsApp de grupos. É como a
                 senha da sua conta de recebimento.
               </p>
             </div>
 
-            <div className="rounded-xl bg-white/80 border border-orange-100 p-4 space-y-2">
-              <p className="font-bold text-base">
+            <div className="rounded-xl bg-white/5 border border-white/15 p-4 space-y-2">
+              <p className="font-bold text-base text-white">
                 Opção B — Só Pix manual (sem cartão automático)
               </p>
-              <ol className="list-decimal pl-5 space-y-2">
+              <ol className="list-decimal pl-5 space-y-2 text-slate-300">
                 <li>Abra o app do seu banco → área Pix → copiar sua chave.</li>
                 <li>
-                  Nesta página, escolha <strong>“Pix manual”</strong>, cole a
+                  Nesta página, escolha <strong className="text-white">“Pix manual”</strong>, cole a
                   chave, diga se é CPF, e-mail, telefone ou aleatória.
                 </li>
                 <li>
@@ -216,20 +216,20 @@ export function AdminPaymentTab({ password, onMessage }: Props) {
                   comprovante.
                 </li>
                 <li>
-                  No painel <strong>Inscritos</strong>, marque como{" "}
-                  <strong>paga</strong> quando o Pix cair na conta.
+                  No painel <strong className="text-white">Inscritos</strong>, marque como{" "}
+                  <strong className="text-white">paga</strong> quando o Pix cair na conta.
                 </li>
               </ol>
-              <p className="text-xs text-orange-900/70">
+              <p className="text-xs text-muted">
                 Neste modo o cartão online não processa sozinho — use só se ainda
                 não tiver Mercado Pago.
               </p>
             </div>
 
-            <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-4">
-              <p className="font-bold text-emerald-900">Como o atleta paga</p>
-              <p className="text-emerald-900/90 mt-1">
-                No site ele escolhe <strong>Pix</strong> ou <strong>Cartão</strong>.
+            <div className="rounded-xl bg-emerald-500/15 border border-emerald-400/30 p-4">
+              <p className="font-bold text-emerald-300">Como o atleta paga</p>
+              <p className="text-slate-200 mt-1">
+                No site ele escolhe <strong className="text-white">Pix</strong> ou <strong className="text-white">Cartão</strong>.
                 Com Mercado Pago, o pagamento é confirmado quase na hora. Com Pix
                 manual, você confere e marca a inscrição como paga.
               </p>
@@ -241,22 +241,22 @@ export function AdminPaymentTab({ password, onMessage }: Props) {
       {/* Formulário de cadastro */}
       <form
         onSubmit={onSave}
-        className="rounded-2xl border border-border bg-card p-5 md:p-8 space-y-5 shadow-sm"
+        className="admin-glass rounded-2xl p-5 md:p-8 space-y-5"
       >
         <div>
-          <h2 className="text-lg font-bold">Cadastro do recebimento</h2>
+          <h2 className="text-lg font-bold text-white">Cadastro do recebimento</h2>
           <p className="text-sm text-muted mt-1">
             Preencha e salve. O site usa isso no checkout.
           </p>
           {settings && tokenConfigured && (
-            <p className="mt-2 text-sm text-emerald-700 font-medium">
+            <p className="mt-2 text-sm text-emerald-400 font-medium">
               ✓ Mercado Pago já configurado ({tokenHint})
             </p>
           )}
         </div>
 
         <div>
-          <p className="text-sm font-medium mb-2">Como você quer receber? *</p>
+          <p className="text-sm font-medium mb-2 text-white">Como você quer receber? *</p>
           <div className="grid sm:grid-cols-2 gap-3">
             <ModeCard
               selected={mode === "mercadopago"}
@@ -274,7 +274,7 @@ export function AdminPaymentTab({ password, onMessage }: Props) {
         </div>
 
         <div className="grid sm:grid-cols-2 gap-3">
-          <label className="flex items-center gap-3 rounded-xl border border-border bg-slate-50 px-4 py-3 cursor-pointer">
+          <label className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 cursor-pointer">
             <input
               type="checkbox"
               checked={acceptPix}
@@ -282,13 +282,13 @@ export function AdminPaymentTab({ password, onMessage }: Props) {
               className="h-5 w-5 accent-orange-600"
             />
             <span>
-              <strong>Aceitar Pix</strong>
+              <strong className="text-white">Aceitar Pix</strong>
               <span className="block text-xs text-muted">
                 Preço do ingresso (sem taxa extra)
               </span>
             </span>
           </label>
-          <label className="flex items-center gap-3 rounded-xl border border-border bg-slate-50 px-4 py-3 cursor-pointer">
+          <label className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 cursor-pointer">
             <input
               type="checkbox"
               checked={acceptCard}
@@ -296,7 +296,7 @@ export function AdminPaymentTab({ password, onMessage }: Props) {
               className="h-5 w-5 accent-orange-600"
             />
             <span>
-              <strong>Aceitar cartão</strong>
+              <strong className="text-white">Aceitar cartão</strong>
               <span className="block text-xs text-muted">
                 Ingresso + taxa % (maquininha / MP)
               </span>
@@ -305,9 +305,9 @@ export function AdminPaymentTab({ password, onMessage }: Props) {
         </div>
 
         {acceptCard && (
-          <div className="rounded-xl border border-border bg-slate-50 p-4 space-y-2">
+          <div className="rounded-xl border border-white/10 bg-white/5 p-4 space-y-2">
             <label className="block">
-              <span className="text-sm font-medium">
+              <span className="text-sm font-medium text-white">
                 Taxa de cartão (%) *
               </span>
               <input
@@ -321,7 +321,7 @@ export function AdminPaymentTab({ password, onMessage }: Props) {
               />
               <p className="text-xs text-muted mt-1.5 leading-relaxed">
                 Repasse no cartão (ex.: maquininha Ton).{" "}
-                <strong>Padrão 5%</strong>. No Pix o atleta paga só o preço do
+                <strong className="text-white">Padrão 5%</strong>. No Pix o atleta paga só o preço do
                 ingresso. Ex.: R$ 100 no Pix → cartão R${" "}
                 {(
                   100 *
@@ -346,9 +346,9 @@ export function AdminPaymentTab({ password, onMessage }: Props) {
         </label>
 
         {mode === "mercadopago" && (
-          <div className="space-y-3 rounded-xl border border-border bg-slate-50 p-4">
+          <div className="space-y-3 rounded-xl border border-white/10 bg-white/5 p-4">
             <label className="block">
-              <span className="text-sm font-medium">
+              <span className="text-sm font-medium text-white">
                 Access Token do Mercado Pago
               </span>
               <input
@@ -382,10 +382,10 @@ export function AdminPaymentTab({ password, onMessage }: Props) {
         )}
 
         {mode === "manual_pix" && (
-          <div className="space-y-3 rounded-xl border border-border bg-slate-50 p-4">
+          <div className="space-y-3 rounded-xl border border-white/10 bg-white/5 p-4">
             <div className="grid sm:grid-cols-2 gap-3">
               <label className="block sm:col-span-1">
-                <span className="text-sm font-medium">Tipo da chave Pix</span>
+                <span className="text-sm font-medium text-white">Tipo da chave Pix</span>
                 <select
                   value={pixKeyType}
                   onChange={(e) =>
@@ -401,7 +401,7 @@ export function AdminPaymentTab({ password, onMessage }: Props) {
                 </select>
               </label>
               <label className="block sm:col-span-1">
-                <span className="text-sm font-medium">Chave Pix</span>
+                <span className="text-sm font-medium text-white">Chave Pix</span>
                 <input
                   value={pixKey}
                   onChange={(e) => setPixKey(e.target.value)}
@@ -414,7 +414,7 @@ export function AdminPaymentTab({ password, onMessage }: Props) {
         )}
 
         <label className="block">
-          <span className="text-sm font-medium">
+          <span className="text-sm font-medium text-white">
             WhatsApp para suporte / comprovante (opcional)
           </span>
           <input
@@ -423,10 +423,13 @@ export function AdminPaymentTab({ password, onMessage }: Props) {
             className="field mt-1.5"
             placeholder="11999999999"
           />
+          <p className="text-xs text-muted mt-1">
+            Atleta envia o print do Pix aqui. Você confere e marca paga em Inscritos.
+          </p>
         </label>
 
         <label className="block">
-          <span className="text-sm font-medium">Observações internas (só você vê)</span>
+          <span className="text-sm font-medium text-white">Observações internas (só você vê)</span>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
@@ -465,14 +468,14 @@ function ModeCard({
       onClick={onClick}
       className={
         selected
-          ? "rounded-xl border-2 border-brand bg-orange-50 p-4 text-left"
-          : "rounded-xl border border-border bg-white p-4 text-left hover:bg-slate-50"
+          ? "rounded-xl border-2 border-brand bg-brand/15 p-4 text-left"
+          : "rounded-xl border border-white/10 bg-white/5 p-4 text-left hover:bg-white/10"
       }
     >
-      <p className="font-bold">{title}</p>
+      <p className="font-bold text-white">{title}</p>
       <p className="text-xs text-muted mt-1">{subtitle}</p>
       {selected && (
-        <p className="text-[11px] font-semibold text-brand mt-2">Selecionado</p>
+        <p className="text-[11px] font-semibold text-brand-soft mt-2">Selecionado</p>
       )}
     </button>
   );
