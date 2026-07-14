@@ -38,6 +38,8 @@ alter table public.events add column if not exists updated_at timestamptz not nu
 alter table public.events add column if not exists payment_mode text not null default 'manual_pix';
 alter table public.events add column if not exists accept_pix boolean not null default true;
 alter table public.events add column if not exists accept_card boolean not null default true;
+-- Taxa % repassada no cartão (Pix não aplica). Padrão 5.
+alter table public.events add column if not exists card_fee_percent numeric not null default 5;
 alter table public.events add column if not exists mp_access_token text;
 alter table public.events add column if not exists pix_key text;
 alter table public.events add column if not exists pix_key_type text;

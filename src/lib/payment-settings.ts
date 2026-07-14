@@ -8,6 +8,11 @@ export type PaymentSettings = {
   mode: PaymentMode;
   accept_pix: boolean;
   accept_card: boolean;
+  /**
+   * Percentual repassado no cartão sobre o valor do ingresso (após cupom).
+   * Ex.: 5 = +5%. Pix não aplica.
+   */
+  card_fee_percent: number;
   /** Token completo só no servidor; no admin vem mascarado se já existir */
   mp_access_token: string;
   mp_token_configured: boolean;
@@ -26,12 +31,15 @@ export type PaymentSettingsPublic = {
   receiver_name: string;
   /** Só em modo manual_pix e se houver chave */
   has_manual_pix: boolean;
+  /** % de taxa no cartão (0 = sem taxa extra) */
+  card_fee_percent: number;
 };
 
 const DEFAULTS: PaymentSettings = {
   mode: "demo",
   accept_pix: true,
   accept_card: true,
+  card_fee_percent: 5,
   mp_access_token: "",
   mp_token_configured: false,
   mp_token_hint: "",
@@ -41,6 +49,24 @@ const DEFAULTS: PaymentSettings = {
   help_whatsapp: "",
   notes: "",
 };
+
+/** Normaliza % da taxa de cartão (0–30). */
+export function clampCardFeePercent(v: unknown): number {
+  const n = typeof v === "number" ? v : Number(v);
+  if (!Number.isFinite(n) || n < 0) return 0;
+  if (n > 30) return 30;
+  return Math.round(n * 100) / 100;
+}
+
+/** Aplica taxa de cartão em centavos (arredonda para o centavo). */
+export function applyCardFeeCents(
+  baseCents: number,
+  feePercent: number
+): number {
+  const p = clampCardFeePercent(feePercent);
+  if (p <= 0 || baseCents <= 0) return Math.max(0, Math.round(baseCents));
+  return Math.round(baseCents * (1 + p / 100));
+}
 
 // Estado demo em memória
 let demoPayment: PaymentSettings = { ...DEFAULTS, mode: "demo" };
@@ -53,10 +79,16 @@ function maskToken(token: string): string {
 function rowToSettings(row: Record<string, unknown>): PaymentSettings {
   const token = String(row.mp_access_token ?? "");
   const mode = (row.payment_mode as PaymentMode) || "manual_pix";
+  const feeRaw = row.card_fee_percent;
+  const fee =
+    feeRaw === null || feeRaw === undefined || feeRaw === ""
+      ? 5
+      : clampCardFeePercent(feeRaw);
   return {
     mode: token ? "mercadopago" : mode === "mercadopago" ? "manual_pix" : mode,
     accept_pix: row.accept_pix !== false,
     accept_card: row.accept_card !== false,
+    card_fee_percent: fee,
     mp_access_token: token,
     mp_token_configured: Boolean(token),
     mp_token_hint: token ? maskToken(token) : "",
@@ -93,7 +125,7 @@ export async function getPaymentSettingsForAdmin(): Promise<PaymentSettings> {
   const { data, error } = await supabase
     .from("events")
     .select(
-      "payment_mode, accept_pix, accept_card, mp_access_token, pix_key, pix_key_type, receiver_name, help_whatsapp, payment_notes"
+      "payment_mode, accept_pix, accept_card, card_fee_percent, mp_access_token, pix_key, pix_key_type, receiver_name, help_whatsapp, payment_notes"
     )
     .eq("id", event.id)
     .single();
@@ -146,6 +178,7 @@ export async function getPaymentSettingsPublic(): Promise<PaymentSettingsPublic>
       accept_card: demoPayment.accept_card,
       receiver_name: demoPayment.receiver_name || "Organizador (demo)",
       has_manual_pix: Boolean(demoPayment.pix_key),
+      card_fee_percent: demoPayment.card_fee_percent,
     };
   }
 
@@ -153,6 +186,7 @@ export async function getPaymentSettingsPublic(): Promise<PaymentSettingsPublic>
   // reload with token flag - getPaymentSettingsForAdmin strips token
   let hasMp = admin.mp_token_configured;
   let pixKey = admin.pix_key;
+  let cardFee = admin.card_fee_percent;
   if (isSupabaseConfigured()) {
     try {
       const event = await getActiveEvent();
@@ -160,18 +194,25 @@ export async function getPaymentSettingsPublic(): Promise<PaymentSettingsPublic>
         const supabase = getServiceSupabase();
         const { data } = await supabase
           .from("events")
-          .select("mp_access_token, pix_key, accept_pix, accept_card, payment_mode, receiver_name")
+          .select(
+            "mp_access_token, pix_key, accept_pix, accept_card, payment_mode, receiver_name, card_fee_percent"
+          )
           .eq("id", event.id)
           .single();
         if (data) {
           hasMp = Boolean(data.mp_access_token);
           pixKey = String(data.pix_key || "");
+          cardFee =
+            data.card_fee_percent === null || data.card_fee_percent === undefined
+              ? 5
+              : clampCardFeePercent(data.card_fee_percent);
           return {
             mode: hasMp ? "mercadopago" : (data.payment_mode as PaymentMode) || "manual_pix",
             accept_pix: data.accept_pix !== false,
             accept_card: data.accept_card !== false,
             receiver_name: String(data.receiver_name || ""),
             has_manual_pix: Boolean(pixKey),
+            card_fee_percent: cardFee,
           };
         }
       }
@@ -186,6 +227,7 @@ export async function getPaymentSettingsPublic(): Promise<PaymentSettingsPublic>
     accept_card: admin.accept_card,
     receiver_name: admin.receiver_name,
     has_manual_pix: Boolean(pixKey),
+    card_fee_percent: cardFee,
   };
 }
 
@@ -193,6 +235,7 @@ export type PaymentSettingsUpdate = {
   mode: PaymentMode;
   accept_pix: boolean;
   accept_card: boolean;
+  card_fee_percent: number;
   /** Se vazio e já havia token, mantém o antigo */
   mp_access_token?: string;
   clear_mp_token?: boolean;
@@ -217,6 +260,7 @@ export async function savePaymentSettings(
       mode: nextToken ? "mercadopago" : input.mode === "mercadopago" ? "manual_pix" : input.mode,
       accept_pix: input.accept_pix,
       accept_card: input.accept_card,
+      card_fee_percent: clampCardFeePercent(input.card_fee_percent),
       mp_access_token: nextToken,
       mp_token_configured: Boolean(nextToken),
       mp_token_hint: nextToken ? maskToken(nextToken) : "",
@@ -267,6 +311,7 @@ export async function savePaymentSettings(
       payment_mode: mode,
       accept_pix: input.accept_pix,
       accept_card: input.accept_card,
+      card_fee_percent: clampCardFeePercent(input.card_fee_percent),
       mp_access_token: token || null,
       pix_key: input.pix_key.trim() || null,
       pix_key_type: input.pix_key_type || null,

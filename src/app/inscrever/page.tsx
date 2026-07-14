@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import { SiteHeader } from "@/components/SiteHeader";
 import { formatBRL, formatDateBR } from "@/lib/format";
+import { applyCardFeeCents } from "@/lib/payment-settings";
 import type { EventPublic } from "@/lib/types";
 
 type PayMethod = "pix" | "card";
@@ -19,6 +20,7 @@ export default function InscreverPage() {
   const [payMethod, setPayMethod] = useState<PayMethod>("pix");
   const [acceptPix, setAcceptPix] = useState(true);
   const [acceptCard, setAcceptCard] = useState(true);
+  const [cardFeePercent, setCardFeePercent] = useState(5);
   const [couponInput, setCouponInput] = useState("");
   const [couponApplied, setCouponApplied] = useState<{
     code: string;
@@ -41,6 +43,11 @@ export default function InscreverPage() {
         const cardOk = data.payment?.accept_card !== false;
         setAcceptPix(pixOk);
         setAcceptCard(cardOk);
+        const fee =
+          typeof data.payment?.card_fee_percent === "number"
+            ? data.payment.card_fee_percent
+            : 5;
+        setCardFeePercent(fee);
         if (!pixOk && cardOk) setPayMethod("card");
         else if (pixOk) setPayMethod("pix");
       })
@@ -178,6 +185,13 @@ export default function InscreverPage() {
 
         {event && (
           <>
+            {(() => {
+              const base = couponApplied?.final ?? event.price_cents;
+              const cardTotal = applyCardFeeCents(base, cardFeePercent);
+              const cardExtra = cardTotal - base;
+              const payTotal = payMethod === "card" ? cardTotal : base;
+              return (
+            <>
             <div className="mt-6 rounded-2xl border border-border bg-card p-4 flex gap-4">
               {event.cover_image_url ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -195,7 +209,12 @@ export default function InscreverPage() {
                   {formatDateBR(event.event_date)} · {event.start_time}
                 </p>
                 <p className="text-brand-soft font-bold mt-1">
-                  {formatBRL(event.price_cents)}
+                  {formatBRL(payTotal)}
+                  {payMethod === "card" && cardFeePercent > 0 && (
+                    <span className="text-xs font-normal text-muted ml-1">
+                      (com taxa cartão)
+                    </span>
+                  )}
                 </p>
                 <p className="text-xs text-muted">
                   {event.slots_remaining} vagas restantes
@@ -319,7 +338,7 @@ export default function InscreverPage() {
                         selected={payMethod === "pix"}
                         onClick={() => setPayMethod("pix")}
                         title="Pix"
-                        subtitle="Aprovação na hora"
+                        subtitle={formatBRL(base)}
                         icon="⚡"
                       />
                     )}
@@ -328,7 +347,11 @@ export default function InscreverPage() {
                         selected={payMethod === "card"}
                         onClick={() => setPayMethod("card")}
                         title="Cartão"
-                        subtitle="Crédito"
+                        subtitle={
+                          cardFeePercent > 0
+                            ? `${formatBRL(cardTotal)} (+${cardFeePercent}%)`
+                            : formatBRL(cardTotal)
+                        }
                         icon="💳"
                       />
                     )}
@@ -342,8 +365,26 @@ export default function InscreverPage() {
                     <p className="mt-2 text-xs text-muted">
                       {payMethod === "pix"
                         ? "Você verá o QR Code / código Pix na próxima tela."
-                        : "Você preenche os dados do cartão na próxima tela."}
+                        : cardFeePercent > 0
+                          ? `Cartão inclui taxa de ${cardFeePercent}% (R$ ${(cardExtra / 100).toFixed(2).replace(".", ",")} a mais).`
+                          : "Você preenche os dados do cartão na próxima tela."}
                     </p>
+                  )}
+                  {payMethod === "card" && cardFeePercent > 0 && (
+                    <div className="mt-3 rounded-xl border border-border bg-card-2/40 px-3 py-2 text-sm space-y-0.5">
+                      <p className="flex justify-between text-muted">
+                        <span>Ingresso</span>
+                        <span>{formatBRL(base)}</span>
+                      </p>
+                      <p className="flex justify-between text-muted">
+                        <span>Taxa cartão ({cardFeePercent}%)</span>
+                        <span>{formatBRL(cardExtra)}</span>
+                      </p>
+                      <p className="flex justify-between font-bold text-foreground pt-1 border-t border-border">
+                        <span>Total no cartão</span>
+                        <span className="text-brand-soft">{formatBRL(cardTotal)}</span>
+                      </p>
+                    </div>
                   )}
                 </div>
 
@@ -361,11 +402,14 @@ export default function InscreverPage() {
                   {submitting
                     ? "Processando…"
                     : payMethod === "pix"
-                      ? `Pagar com Pix · ${formatBRL(couponApplied?.final ?? event.price_cents)}`
-                      : `Pagar com cartão · ${formatBRL(couponApplied?.final ?? event.price_cents)}`}
+                      ? `Pagar com Pix · ${formatBRL(base)}`
+                      : `Pagar com cartão · ${formatBRL(cardTotal)}`}
                 </button>
               </form>
             )}
+          </>
+              );
+            })()}
           </>
         )}
       </main>

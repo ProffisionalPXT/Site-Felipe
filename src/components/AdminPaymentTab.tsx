@@ -16,6 +16,7 @@ export function AdminPaymentTab({ password, onMessage }: Props) {
   const [mode, setMode] = useState<"mercadopago" | "manual_pix">("manual_pix");
   const [acceptPix, setAcceptPix] = useState(true);
   const [acceptCard, setAcceptCard] = useState(true);
+  const [cardFeePercent, setCardFeePercent] = useState("5");
   const [mpToken, setMpToken] = useState("");
   const [clearToken, setClearToken] = useState(false);
   const [pixKey, setPixKey] = useState("");
@@ -44,6 +45,13 @@ export function AdminPaymentTab({ password, onMessage }: Props) {
         );
         setAcceptPix(s.accept_pix);
         setAcceptCard(s.accept_card);
+        setCardFeePercent(
+          String(
+            s.card_fee_percent === undefined || s.card_fee_percent === null
+              ? 5
+              : s.card_fee_percent
+          )
+        );
         setPixKey(s.pix_key || "");
         setPixKeyType(s.pix_key_type || "random");
         setReceiverName(s.receiver_name || "");
@@ -71,6 +79,7 @@ export function AdminPaymentTab({ password, onMessage }: Props) {
           mode: mode === "mercadopago" ? "mercadopago" : "manual_pix",
           accept_pix: acceptPix,
           accept_card: acceptCard,
+          card_fee_percent: Number(String(cardFeePercent).replace(",", ".")) || 0,
           mp_access_token: mpToken.trim() || undefined,
           clear_mp_token: clearToken,
           pix_key: pixKey,
@@ -274,7 +283,9 @@ export function AdminPaymentTab({ password, onMessage }: Props) {
             />
             <span>
               <strong>Aceitar Pix</strong>
-              <span className="block text-xs text-muted">No checkout do site</span>
+              <span className="block text-xs text-muted">
+                Preço do ingresso (sem taxa extra)
+              </span>
             </span>
           </label>
           <label className="flex items-center gap-3 rounded-xl border border-border bg-slate-50 px-4 py-3 cursor-pointer">
@@ -283,18 +294,46 @@ export function AdminPaymentTab({ password, onMessage }: Props) {
               checked={acceptCard}
               onChange={(e) => setAcceptCard(e.target.checked)}
               className="h-5 w-5 accent-orange-600"
-              disabled={mode === "manual_pix"}
             />
             <span>
               <strong>Aceitar cartão</strong>
               <span className="block text-xs text-muted">
-                {mode === "manual_pix"
-                  ? "Disponível só com Mercado Pago"
-                  : "Crédito via Mercado Pago"}
+                Ingresso + taxa % (maquininha / MP)
               </span>
             </span>
           </label>
         </div>
+
+        {acceptCard && (
+          <div className="rounded-xl border border-border bg-slate-50 p-4 space-y-2">
+            <label className="block">
+              <span className="text-sm font-medium">
+                Taxa de cartão (%) *
+              </span>
+              <input
+                type="number"
+                min={0}
+                max={30}
+                step={0.1}
+                value={cardFeePercent}
+                onChange={(e) => setCardFeePercent(e.target.value)}
+                className="field mt-1.5 max-w-[10rem]"
+              />
+              <p className="text-xs text-muted mt-1.5 leading-relaxed">
+                Repasse no cartão (ex.: maquininha Ton).{" "}
+                <strong>Padrão 5%</strong>. No Pix o atleta paga só o preço do
+                ingresso. Ex.: R$ 100 no Pix → cartão R${" "}
+                {(
+                  100 *
+                  (1 +
+                    (Number(String(cardFeePercent).replace(",", ".")) || 0) /
+                      100)
+                ).toFixed(2).replace(".", ",")}
+                .
+              </p>
+            </label>
+          </div>
+        )}
 
         <label className="block">
           <span className="text-sm font-medium">Nome de quem recebe</span>

@@ -6,6 +6,11 @@ import {
 } from "@/lib/coupons";
 import { isDemoMode } from "@/lib/demo-data";
 import { getActiveEvent, isValidCpf, onlyDigits } from "@/lib/event";
+import {
+  applyCardFeeCents,
+  clampCardFeePercent,
+  getPaymentSettingsPublic,
+} from "@/lib/payment-settings";
 import { getServiceSupabase, isSupabaseConfigured } from "@/lib/supabase";
 
 const bodySchema = z.object({
@@ -39,11 +44,13 @@ export async function POST(req: NextRequest) {
   const data = parsed.data;
   const cpf = onlyDigits(data.cpf);
 
-  async function resolvePrice(baseCents: number) {
+  async function resolvePrice(baseCents: number, cardFeePercent: number) {
     let amount = baseCents;
     let discount = 0;
     let couponCode: string | null = null;
     let couponId: string | null = null;
+    let cardFeeCents = 0;
+    const feePct = clampCardFeePercent(cardFeePercent);
 
     if (data.coupon_code?.trim()) {
       const v = await validateCouponCode(data.coupon_code, baseCents);
@@ -55,7 +62,22 @@ export async function POST(req: NextRequest) {
       couponCode = v.coupon.code;
       couponId = v.coupon.id;
     }
-    return { amount, discount, couponCode, couponId };
+
+    const afterCoupon = amount;
+    if ((data.payment_method || "pix") === "card" && feePct > 0) {
+      amount = applyCardFeeCents(afterCoupon, feePct);
+      cardFeeCents = amount - afterCoupon;
+    }
+
+    return {
+      amount,
+      discount,
+      couponCode,
+      couponId,
+      cardFeeCents,
+      cardFeePercent: feePct,
+      afterCouponCents: afterCoupon,
+    };
   }
 
   if (isDemoMode()) {
@@ -66,15 +88,27 @@ export async function POST(req: NextRequest) {
       );
     }
     const ev = (await import("@/lib/demo-data")).getDemoEvent();
-    const priced = await resolvePrice(ev.price_cents);
+    const payPub = await getPaymentSettingsPublic();
+    const priced = await resolvePrice(ev.price_cents, payPub.card_fee_percent);
     if ("error" in priced && priced.error) {
       return NextResponse.json({ error: priced.error }, { status: 400 });
     }
-    const { amount, discount, couponCode, couponId } = priced as {
+    const {
+      amount,
+      discount,
+      couponCode,
+      couponId,
+      cardFeeCents,
+      cardFeePercent,
+      afterCouponCents,
+    } = priced as {
       amount: number;
       discount: number;
       couponCode: string | null;
       couponId: string | null;
+      cardFeeCents: number;
+      cardFeePercent: number;
+      afterCouponCents: number;
     };
 
     if (couponId) await consumeCoupon(couponId);
@@ -108,8 +142,12 @@ export async function POST(req: NextRequest) {
       pricing: {
         original_cents: ev.price_cents,
         discount_cents: discount,
+        after_coupon_cents: afterCouponCents,
+        card_fee_cents: cardFeeCents,
+        card_fee_percent: cardFeePercent,
         final_cents: amount,
         coupon_code: couponCode,
+        payment_method: data.payment_method || "pix",
       },
     });
   }
@@ -144,15 +182,30 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Tamanho de camiseta inválido." }, { status: 400 });
     }
 
-    const priced = await resolvePrice(event.price_cents);
+    const payPub = await getPaymentSettingsPublic();
+    const priced = await resolvePrice(
+      event.price_cents,
+      payPub.card_fee_percent
+    );
     if ("error" in priced && priced.error) {
       return NextResponse.json({ error: priced.error }, { status: 400 });
     }
-    const { amount, discount, couponCode, couponId } = priced as {
+    const {
+      amount,
+      discount,
+      couponCode,
+      couponId,
+      cardFeeCents,
+      cardFeePercent,
+      afterCouponCents,
+    } = priced as {
       amount: number;
       discount: number;
       couponCode: string | null;
       couponId: string | null;
+      cardFeeCents: number;
+      cardFeePercent: number;
+      afterCouponCents: number;
     };
 
     const supabase = getServiceSupabase();
@@ -219,8 +272,12 @@ export async function POST(req: NextRequest) {
       pricing: {
         original_cents: event.price_cents,
         discount_cents: discount,
+        after_coupon_cents: afterCouponCents,
+        card_fee_cents: cardFeeCents,
+        card_fee_percent: cardFeePercent,
         final_cents: amount,
         coupon_code: couponCode,
+        payment_method: data.payment_method || "pix",
       },
     });
   } catch (err) {
