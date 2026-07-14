@@ -57,6 +57,12 @@ function Content() {
           </Link>
         )}
         <Link
+          href="/atleta"
+          className="inline-flex justify-center rounded-full border border-border px-6 py-2.5 text-sm font-semibold hover:bg-white/5"
+        >
+          Ver com CPF (área do atleta)
+        </Link>
+        <Link
           href="/"
           className="inline-flex justify-center rounded-full bg-brand px-6 py-2.5 text-sm font-bold text-white hover:bg-brand-dark"
         >
