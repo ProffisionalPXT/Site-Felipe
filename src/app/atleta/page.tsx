@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { SiteHeader } from "@/components/SiteHeader";
-import { formatBRL, formatDateBR, formatDateLongBR } from "@/lib/format";
+import { formatBRL, formatDateLongBR } from "@/lib/format";
 
 type AthleteReg = {
   id: string;
@@ -22,39 +22,84 @@ type AthleteReg = {
   location: string;
   city: string;
   has_receipt: boolean;
+  can_pay?: boolean;
 };
 
+type Session = { cpf: string; password: string };
+const SESSION_KEY = "athlete_session";
+
 export default function AtletaPage() {
-  const [cpf, setCpf] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [regs, setRegs] = useState<AthleteReg[] | null>(null);
   const [cpfMasked, setCpfMasked] = useState("");
   const [selected, setSelected] = useState<AthleteReg | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [loggingIn, setLoggingIn] = useState(false);
 
-  async function onConsult(e: FormEvent) {
-    e.preventDefault();
+  async function doLogin(cpf: string, password: string) {
     setError(null);
-    setRegs(null);
-    setSelected(null);
-    setLoading(true);
+    setLoggingIn(true);
     try {
-      const res = await fetch("/api/atleta/consulta", {
+      const res = await fetch("/api/atleta/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cpf }),
+        body: JSON.stringify({ cpf, password }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Falha na consulta");
+      if (!res.ok) throw new Error(data.error || "Falha no acesso");
+      const list = (data.registrations || []) as AthleteReg[];
+      setRegs(list);
       setCpfMasked(data.cpf_masked || "");
-      setRegs(data.registrations || []);
-      if ((data.registrations || []).length === 1) {
-        setSelected(data.registrations[0]);
+      setSelected(list.length === 1 ? list[0] : null);
+      const sess = { cpf: cpf.replace(/\D/g, ""), password };
+      setSession(sess);
+      try {
+        sessionStorage.setItem(SESSION_KEY, JSON.stringify(sess));
+      } catch {
+        /* */
       }
     } catch (err) {
+      setSession(null);
+      setRegs(null);
       setError(err instanceof Error ? err.message : "Erro");
     } finally {
+      setLoggingIn(false);
       setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(SESSION_KEY);
+      if (raw) {
+        const s = JSON.parse(raw) as Session;
+        if (s.cpf && s.password) {
+          void doLogin(s.cpf, s.password);
+          return;
+        }
+      }
+    } catch {
+      /* */
+    }
+    setLoading(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function onLogin(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    void doLogin(String(fd.get("cpf") || ""), String(fd.get("password") || ""));
+  }
+
+  function logout() {
+    setSession(null);
+    setRegs(null);
+    setSelected(null);
+    try {
+      sessionStorage.removeItem(SESSION_KEY);
+    } catch {
+      /* */
     }
   }
 
@@ -66,124 +111,171 @@ export default function AtletaPage() {
           ← Voltar ao evento
         </Link>
         <h1 className="mt-3 text-2xl font-black tracking-tight">
-          Área do atleta
+          Meu ingresso
         </h1>
         <p className="text-sm text-muted mt-1 leading-relaxed">
-          Sem criar conta: digite o <strong className="text-foreground">CPF</strong>{" "}
-          usado na inscrição para ver o status e o comprovante de pagamento.
-          Ainda não se inscreveu?{" "}
-          <Link href="/inscrever" className="text-brand-soft underline font-medium">
-            Ir para Inscrição
-          </Link>
-          .
+          Acesso só para quem <strong className="text-foreground">já se inscreveu</strong>:
+          CPF + senha criados na inscrição. Quem não cadastrou não entra.
         </p>
 
-        <form
-          onSubmit={onConsult}
-          className="mt-6 rounded-2xl border border-border bg-card p-5 space-y-4 shadow-sm"
-        >
-          <label className="block">
-            <span className="text-sm font-medium">CPF da inscrição</span>
-            <input
-              value={cpf}
-              onChange={(e) => setCpf(e.target.value)}
-              placeholder="000.000.000-00"
-              inputMode="numeric"
-              autoComplete="off"
-              className="mt-1.5 w-full rounded-xl border border-border bg-card-2 px-3 py-3 outline-none focus:ring-2 focus:ring-brand/40"
-              required
-            />
-          </label>
-          {error && (
-            <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">
-              {error}
-            </p>
-          )}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-2xl bg-brand py-3.5 font-bold text-white hover:bg-brand-dark disabled:opacity-60"
+        {loading && <p className="mt-8 text-muted">Carregando…</p>}
+
+        {!loading && !session && (
+          <form
+            onSubmit={onLogin}
+            className="mt-6 rounded-2xl border border-border bg-card p-5 space-y-4 shadow-sm"
           >
-            {loading ? "Consultando…" : "Consultar inscrição"}
-          </button>
-        </form>
-
-        {regs && regs.length === 0 && (
-          <div className="mt-6 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-5 text-sm">
-            <p className="font-semibold">Nenhuma inscrição encontrada</p>
-            <p className="text-muted mt-1">
-              Confira o CPF ou faça a inscrição em{" "}
+            <label className="block">
+              <span className="text-sm font-medium">CPF</span>
+              <input
+                name="cpf"
+                required
+                placeholder="000.000.000-00"
+                inputMode="numeric"
+                className="mt-1.5 w-full rounded-xl border border-border bg-card-2 px-3 py-3 outline-none focus:ring-2 focus:ring-brand/40"
+              />
+            </label>
+            <label className="block">
+              <span className="text-sm font-medium">Senha de acesso</span>
+              <input
+                name="password"
+                type="password"
+                required
+                minLength={4}
+                className="mt-1.5 w-full rounded-xl border border-border bg-card-2 px-3 py-3 outline-none focus:ring-2 focus:ring-brand/40"
+              />
+            </label>
+            {error && (
+              <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+                {error}
+              </p>
+            )}
+            <button
+              type="submit"
+              disabled={loggingIn}
+              className="w-full rounded-2xl bg-brand py-3.5 font-bold text-white hover:bg-brand-dark disabled:opacity-60"
+            >
+              {loggingIn ? "Entrando…" : "Entrar"}
+            </button>
+            <p className="text-center text-xs text-muted">
+              Ainda não tem inscrição?{" "}
               <Link href="/inscrever" className="text-brand-soft underline">
-                Comprar ingresso
+                Fazer inscrição
               </Link>
-              .
             </p>
-          </div>
+          </form>
         )}
 
-        {regs && regs.length > 1 && !selected && (
-          <div className="mt-6 space-y-3">
-            <p className="text-sm text-muted">
-              CPF {cpfMasked} · {regs.length} inscrições. Escolha uma:
-            </p>
-            {regs.map((r) => (
-              <button
-                key={r.id}
-                type="button"
-                onClick={() => setSelected(r)}
-                className="w-full rounded-2xl border border-border bg-card p-4 text-left hover:border-brand/50 transition"
-              >
-                <p className="font-bold">{r.event_name}</p>
-                <p className="text-xs text-muted mt-0.5">
-                  {r.category} · {r.status_label}
-                </p>
-                <p className="text-sm font-semibold text-brand-soft mt-1">
-                  {r.amount_label}
-                </p>
-              </button>
-            ))}
-          </div>
-        )}
-
-        {selected && (
+        {!loading && session && regs && (
           <div className="mt-6 space-y-4">
-            {regs && regs.length > 1 && (
+            <div className="flex justify-between items-center text-sm">
+              <p className="text-muted">
+                CPF {cpfMasked}
+                {regs[0] && (
+                  <>
+                    {" · "}
+                    <span className="text-foreground font-medium">
+                      {regs[0].full_name}
+                    </span>
+                  </>
+                )}
+              </p>
               <button
                 type="button"
-                className="text-sm text-muted hover:text-foreground"
-                onClick={() => setSelected(null)}
+                onClick={logout}
+                className="text-xs underline text-muted hover:text-foreground"
               >
-                ← Outras inscrições deste CPF
+                Sair
               </button>
+            </div>
+
+            {regs.length === 0 && (
+              <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-5 text-sm">
+                Nenhuma inscrição.{" "}
+                <Link href="/inscrever" className="underline text-brand-soft">
+                  Inscrever-se
+                </Link>
+              </div>
             )}
 
-            <ReceiptCard reg={selected} />
+            {regs.length > 1 && !selected && (
+              <div className="space-y-3">
+                <p className="text-sm text-muted">Escolha uma inscrição:</p>
+                {regs.map((r) => (
+                  <button
+                    key={r.id}
+                    type="button"
+                    onClick={() => setSelected(r)}
+                    className="w-full rounded-2xl border border-border bg-card p-4 text-left hover:border-brand/50"
+                  >
+                    <p className="font-bold">{r.event_name}</p>
+                    <p className="text-xs text-muted">
+                      {r.category} · {r.status_label}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            )}
 
-            <div className="flex flex-col sm:flex-row gap-2 print:hidden">
-              {selected.has_receipt && (
-                <button
-                  type="button"
-                  onClick={() => window.print()}
-                  className="flex-1 rounded-xl bg-brand py-3 font-bold text-white hover:bg-brand-dark"
-                >
-                  Imprimir / salvar PDF
-                </button>
-              )}
-              {selected.status === "pending" && (
-                <Link
-                  href={`/pagar?id=${selected.id}&method=${selected.payment_method === "card" ? "card" : "pix"}&amount=${selected.amount_cents}`}
-                  className="flex-1 inline-flex justify-center rounded-xl border border-border py-3 text-sm font-semibold hover:bg-white/5"
-                >
-                  Ir ao pagamento
-                </Link>
-              )}
-              <Link
-                href="/"
-                className="flex-1 inline-flex justify-center rounded-xl border border-border py-3 text-sm font-semibold hover:bg-white/5"
-              >
-                Site do evento
-              </Link>
-            </div>
+            {selected && (
+              <>
+                {regs.length > 1 && (
+                  <button
+                    type="button"
+                    className="text-sm text-muted"
+                    onClick={() => setSelected(null)}
+                  >
+                    ← Outras inscrições
+                  </button>
+                )}
+                <ReceiptCard reg={selected} />
+                <div className="flex flex-col sm:flex-row gap-2 print:hidden">
+                  {selected.can_pay !== false &&
+                    selected.status === "pending" && (
+                      <Link
+                        href="/comprar"
+                        className="flex-1 inline-flex justify-center rounded-xl bg-brand py-3 font-bold text-white"
+                      >
+                        Comprar / pagar
+                      </Link>
+                    )}
+                  {selected.has_receipt && (
+                    <button
+                      type="button"
+                      onClick={() => window.print()}
+                      className="flex-1 rounded-xl border border-border py-3 text-sm font-semibold"
+                    >
+                      Imprimir comprovante
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
+
+            {regs.length === 1 && !selected && regs[0] && (
+              <>
+                <ReceiptCard reg={regs[0]} />
+                <div className="flex flex-col sm:flex-row gap-2 print:hidden">
+                  {regs[0].status === "pending" && (
+                    <Link
+                      href="/comprar"
+                      className="flex-1 inline-flex justify-center rounded-xl bg-brand py-3 font-bold text-white"
+                    >
+                      Comprar / pagar
+                    </Link>
+                  )}
+                  {regs[0].has_receipt && (
+                    <button
+                      type="button"
+                      onClick={() => window.print()}
+                      className="flex-1 rounded-xl border border-border py-3 text-sm font-semibold"
+                    >
+                      Imprimir comprovante
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         )}
       </main>
@@ -198,46 +290,33 @@ function ReceiptCard({ reg }: { reg: AthleteReg }) {
       : reg.payment_method === "card"
         ? "Cartão"
         : reg.payment_method || "—";
-
   const paid = reg.status === "paid";
 
   return (
-    <article
-      className="rounded-2xl border border-border bg-card p-5 md:p-6 shadow-lg print:shadow-none print:border-black"
-      id="comprovante-atleta"
-    >
+    <article className="rounded-2xl border border-border bg-card p-5 md:p-6 shadow-lg print:shadow-none">
       <div className="flex items-start justify-between gap-3 border-b border-border pb-4">
         <div>
           <p className="text-[11px] uppercase tracking-wider text-muted font-semibold">
-            {paid ? "Comprovante de inscrição" : "Consulta de inscrição"}
+            {paid ? "Comprovante" : "Inscrição"}
           </p>
-          <h2 className="text-xl font-black mt-1 leading-tight">
-            {reg.event_name}
-          </h2>
+          <h2 className="text-xl font-black mt-1">{reg.event_name}</h2>
         </div>
         <span
           className={
             paid
-              ? "shrink-0 rounded-full bg-emerald-500/20 border border-emerald-400/40 px-3 py-1 text-xs font-bold text-emerald-300"
-              : reg.status === "pending"
-                ? "shrink-0 rounded-full bg-amber-500/20 border border-amber-400/40 px-3 py-1 text-xs font-bold text-amber-200"
-                : "shrink-0 rounded-full bg-white/10 border border-border px-3 py-1 text-xs font-bold text-muted"
+              ? "rounded-full bg-emerald-500/20 border border-emerald-400/40 px-3 py-1 text-xs font-bold text-emerald-300"
+              : "rounded-full bg-amber-500/20 border border-amber-400/40 px-3 py-1 text-xs font-bold text-amber-200"
           }
         >
           {reg.status_label}
         </span>
       </div>
-
       <dl className="mt-4 space-y-3 text-sm">
         <Row label="Atleta" value={reg.full_name} />
         <Row label="CPF" value={reg.cpf_masked} />
         <Row
           label="Data do evento"
-          value={
-            reg.event_date
-              ? formatDateLongBR(reg.event_date)
-              : "—"
-          }
+          value={reg.event_date ? formatDateLongBR(reg.event_date) : "—"}
         />
         <Row
           label="Local"
@@ -246,34 +325,12 @@ function ReceiptCard({ reg }: { reg: AthleteReg }) {
         <Row label="Categoria" value={reg.category} />
         <Row label="Camiseta" value={reg.shirt_size} />
         <Row label="Valor" value={reg.amount_label || formatBRL(reg.amount_cents)} />
-        <Row label="Forma de pagamento" value={methodLabel} />
-        <Row
-          label="Inscrito em"
-          value={
-            reg.created_at
-              ? new Date(reg.created_at).toLocaleString("pt-BR")
-              : "—"
-          }
-        />
+        <Row label="Pagamento" value={methodLabel} />
       </dl>
-
       <div className="mt-5 rounded-xl bg-card-2 border border-border px-3 py-2">
-        <p className="text-[10px] uppercase text-muted">Código da inscrição</p>
+        <p className="text-[10px] uppercase text-muted">Código</p>
         <p className="font-mono text-xs break-all mt-0.5">{reg.id}</p>
       </div>
-
-      {paid ? (
-        <p className="mt-4 text-xs text-muted leading-relaxed">
-          Guarde este comprovante. Apresente o código ou o CPF na retirada do kit
-          / credenciamento, se o organizador pedir. Consulta também em{" "}
-          <strong className="text-foreground">/atleta</strong> com o mesmo CPF.
-        </p>
-      ) : (
-        <p className="mt-4 text-xs text-amber-200/90 leading-relaxed">
-          Pagamento ainda não confirmado. Conclua o pagamento ou envie o
-          comprovante do Pix ao organizador (WhatsApp do evento).
-        </p>
-      )}
     </article>
   );
 }

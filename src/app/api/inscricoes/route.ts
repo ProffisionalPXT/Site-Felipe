@@ -1,16 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import {
-  consumeCoupon,
-  validateCouponCode,
-} from "@/lib/coupons";
+  hashAthletePassword,
+  isValidAthletePassword,
+} from "@/lib/athlete-auth";
 import { isDemoMode } from "@/lib/demo-data";
 import { getActiveEvent, isValidCpf, onlyDigits } from "@/lib/event";
-import {
-  applyCardFeeCents,
-  clampCardFeePercent,
-  getPaymentSettingsPublic,
-} from "@/lib/payment-settings";
 import { getServiceSupabase, isSupabaseConfigured } from "@/lib/supabase";
 
 const bodySchema = z.object({
@@ -21,10 +16,13 @@ const bodySchema = z.object({
   email: z.string().email(),
   shirt_size: z.string().min(1).max(20),
   category: z.string().min(1).max(60),
-  payment_method: z.enum(["pix", "card"]).optional(),
-  coupon_code: z.string().max(40).optional().nullable(),
+  /** Senha da área do atleta (obrigatória na inscrição) */
+  access_password: z.string().min(4).max(72),
 });
 
+/**
+ * Cria só a inscrição (cadastro). Pagamento é em /comprar.
+ */
 export async function POST(req: NextRequest) {
   let json: unknown;
   try {
@@ -36,7 +34,7 @@ export async function POST(req: NextRequest) {
   const parsed = bodySchema.safeParse(json);
   if (!parsed.success) {
     return NextResponse.json(
-      { error: "Dados inválidos.", details: parsed.error.flatten() },
+      { error: "Dados inválidos. Confira os campos e a senha (mín. 4 caracteres)." },
       { status: 400 }
     );
   }
@@ -44,41 +42,14 @@ export async function POST(req: NextRequest) {
   const data = parsed.data;
   const cpf = onlyDigits(data.cpf);
 
-  async function resolvePrice(baseCents: number, cardFeePercent: number) {
-    let amount = baseCents;
-    let discount = 0;
-    let couponCode: string | null = null;
-    let couponId: string | null = null;
-    let cardFeeCents = 0;
-    const feePct = clampCardFeePercent(cardFeePercent);
-
-    if (data.coupon_code?.trim()) {
-      const v = await validateCouponCode(data.coupon_code, baseCents);
-      if (!v.ok) {
-        return { error: v.error as string };
-      }
-      amount = v.final_cents;
-      discount = v.discount_cents;
-      couponCode = v.coupon.code;
-      couponId = v.coupon.id;
-    }
-
-    const afterCoupon = amount;
-    if ((data.payment_method || "pix") === "card" && feePct > 0) {
-      amount = applyCardFeeCents(afterCoupon, feePct);
-      cardFeeCents = amount - afterCoupon;
-    }
-
-    return {
-      amount,
-      discount,
-      couponCode,
-      couponId,
-      cardFeeCents,
-      cardFeePercent: feePct,
-      afterCouponCents: afterCoupon,
-    };
+  if (!isValidAthletePassword(data.access_password)) {
+    return NextResponse.json(
+      { error: "Senha de acesso: entre 4 e 72 caracteres." },
+      { status: 400 }
+    );
   }
+
+  const passwordHash = hashAthletePassword(data.access_password);
 
   if (isDemoMode()) {
     if (cpf.length !== 11) {
@@ -88,31 +59,6 @@ export async function POST(req: NextRequest) {
       );
     }
     const ev = (await import("@/lib/demo-data")).getDemoEvent();
-    const payPub = await getPaymentSettingsPublic();
-    const priced = await resolvePrice(ev.price_cents, payPub.card_fee_percent);
-    if ("error" in priced && priced.error) {
-      return NextResponse.json({ error: priced.error }, { status: 400 });
-    }
-    const {
-      amount,
-      discount,
-      couponCode,
-      couponId,
-      cardFeeCents,
-      cardFeePercent,
-      afterCouponCents,
-    } = priced as {
-      amount: number;
-      discount: number;
-      couponCode: string | null;
-      couponId: string | null;
-      cardFeeCents: number;
-      cardFeePercent: number;
-      afterCouponCents: number;
-    };
-
-    if (couponId) await consumeCoupon(couponId);
-
     const id = crypto.randomUUID();
     return NextResponse.json({
       demo: true,
@@ -128,10 +74,10 @@ export async function POST(req: NextRequest) {
         category: data.category,
         status: "pending",
         payment_id: null,
-        payment_method: data.payment_method || "pix",
-        amount_cents: amount,
-        coupon_code: couponCode,
-        discount_cents: discount,
+        payment_method: null,
+        amount_cents: ev.price_cents,
+        coupon_code: null,
+        discount_cents: 0,
         created_at: new Date().toISOString(),
       },
       event: {
@@ -139,16 +85,8 @@ export async function POST(req: NextRequest) {
         name: ev.name,
         price_cents: ev.price_cents,
       },
-      pricing: {
-        original_cents: ev.price_cents,
-        discount_cents: discount,
-        after_coupon_cents: afterCouponCents,
-        card_fee_cents: cardFeeCents,
-        card_fee_percent: cardFeePercent,
-        final_cents: amount,
-        coupon_code: couponCode,
-        payment_method: data.payment_method || "pix",
-      },
+      message:
+        "Inscrição registrada. Use CPF + senha em Meu ingresso e depois Comprar para pagar.",
     });
   }
 
@@ -182,44 +120,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Tamanho de camiseta inválido." }, { status: 400 });
     }
 
-    const payPub = await getPaymentSettingsPublic();
-    const priced = await resolvePrice(
-      event.price_cents,
-      payPub.card_fee_percent
-    );
-    if ("error" in priced && priced.error) {
-      return NextResponse.json({ error: priced.error }, { status: 400 });
-    }
-    const {
-      amount,
-      discount,
-      couponCode,
-      couponId,
-      cardFeeCents,
-      cardFeePercent,
-      afterCouponCents,
-    } = priced as {
-      amount: number;
-      discount: number;
-      couponCode: string | null;
-      couponId: string | null;
-      cardFeeCents: number;
-      cardFeePercent: number;
-      afterCouponCents: number;
-    };
-
     const supabase = getServiceSupabase();
 
     const { data: existing } = await supabase
       .from("registrations")
-      .select("id, status")
+      .select("id, status, access_password_hash")
       .eq("event_id", event.id)
       .eq("cpf", cpf)
       .maybeSingle();
 
     if (existing && existing.status !== "cancelled") {
       return NextResponse.json(
-        { error: "Já existe inscrição com este CPF para este evento." },
+        {
+          error:
+            "Já existe inscrição com este CPF. Entre em Meu ingresso com CPF e senha, ou use Comprar para pagar.",
+        },
         { status: 409 }
       );
     }
@@ -234,11 +149,12 @@ export async function POST(req: NextRequest) {
       shirt_size: data.shirt_size,
       category: data.category,
       status: "pending" as const,
-      amount_cents: amount,
+      amount_cents: event.price_cents,
       payment_id: null,
-      payment_method: data.payment_method || null,
-      coupon_code: couponCode,
-      discount_cents: discount,
+      payment_method: null,
+      coupon_code: null,
+      discount_cents: 0,
+      access_password_hash: passwordHash,
     };
 
     const { data: registration, error } = existing
@@ -246,9 +162,17 @@ export async function POST(req: NextRequest) {
           .from("registrations")
           .update(payload)
           .eq("id", existing.id)
-          .select("*")
+          .select(
+            "id, event_id, full_name, cpf, birth_date, phone, email, shirt_size, category, status, payment_id, payment_method, amount_cents, created_at"
+          )
           .single()
-      : await supabase.from("registrations").insert(payload).select("*").single();
+      : await supabase
+          .from("registrations")
+          .insert(payload)
+          .select(
+            "id, event_id, full_name, cpf, birth_date, phone, email, shirt_size, category, status, payment_id, payment_method, amount_cents, created_at"
+          )
+          .single();
 
     if (error) {
       if (error.code === "23505") {
@@ -257,10 +181,17 @@ export async function POST(req: NextRequest) {
           { status: 409 }
         );
       }
+      if (error.message?.includes("access_password_hash") || error.message?.includes("column")) {
+        return NextResponse.json(
+          {
+            error:
+              "Falta rodar no Supabase o SQL: alter table registrations add column if not exists access_password_hash text;",
+          },
+          { status: 500 }
+        );
+      }
       throw error;
     }
-
-    if (couponId) await consumeCoupon(couponId);
 
     return NextResponse.json({
       registration,
@@ -269,16 +200,8 @@ export async function POST(req: NextRequest) {
         name: event.name,
         price_cents: event.price_cents,
       },
-      pricing: {
-        original_cents: event.price_cents,
-        discount_cents: discount,
-        after_coupon_cents: afterCouponCents,
-        card_fee_cents: cardFeeCents,
-        card_fee_percent: cardFeePercent,
-        final_cents: amount,
-        coupon_code: couponCode,
-        payment_method: data.payment_method || "pix",
-      },
+      message:
+        "Inscrição registrada. Entre em Meu ingresso (CPF + senha) e use Comprar para pagar.",
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Erro ao inscrever";

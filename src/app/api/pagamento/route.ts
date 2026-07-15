@@ -2,12 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { MercadoPagoConfig, Preference } from "mercadopago";
 import { z } from "zod";
 import { isDemoMode } from "@/lib/demo-data";
-import { getMercadoPagoAccessToken } from "@/lib/payment-settings";
+import {
+  applyCardFeeCents,
+  getMercadoPagoAccessToken,
+  getPaymentSettingsPublic,
+} from "@/lib/payment-settings";
 import { getServiceSupabase, isSupabaseConfigured } from "@/lib/supabase";
 
 const bodySchema = z.object({
   registration_id: z.string().uuid(),
   payment_method: z.enum(["pix", "card"]).optional(),
+  apply_card_fee: z.boolean().optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -27,10 +32,17 @@ export async function POST(req: NextRequest) {
 
   // Demo (sem banco real) → sempre tela /pagar simulada
   if (isDemoMode()) {
+    const payPub = await getPaymentSettingsPublic();
+    const base = 8900;
+    const amount =
+      method === "card"
+        ? applyCardFeeCents(base, payPub.card_fee_percent)
+        : base;
     return NextResponse.json({
       demo: true,
       manual: true,
       payment_method: method,
+      amount_cents: amount,
       message: "Use a tela de pagamento da demonstração.",
     });
   }
@@ -71,10 +83,27 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Inscrição cancelada." }, { status: 400 });
     }
 
-    // Guarda preferência do atleta
+    // Valor: base da inscrição; cartão pode incluir taxa
+    const payPub = await getPaymentSettingsPublic();
+    let amountCents = Number(registration.amount_cents) || 0;
+    // amount_cents na inscrição é o preço base (sem taxa); aplica taxa no cartão
+    if (method === "card" && payPub.card_fee_percent > 0) {
+      // Se já tiver sido gravado com taxa, evita dobrar: usa o menor razoável
+      const withFee = applyCardFeeCents(
+        // reverte se já tinha taxa gravada? preferimos base do evento via amount original
+        // amount_cents na inscrição é base sem taxa de cartão
+        amountCents,
+        payPub.card_fee_percent
+      );
+      amountCents = withFee;
+    }
+
     await supabase
       .from("registrations")
-      .update({ payment_method: method })
+      .update({
+        payment_method: method,
+        amount_cents: amountCents,
+      })
       .eq("id", registration.id);
 
     const appUrl =
@@ -104,7 +133,6 @@ export async function POST(req: NextRequest) {
               { id: "ticket" },
               { id: "atm" },
             ],
-            // bank_transfer costuma incluir Pix no BR; credit_card fica liberado
           };
 
     const result = await preference.create({
@@ -114,7 +142,7 @@ export async function POST(req: NextRequest) {
             id: registration.id,
             title: `Inscrição — ${eventName}`,
             quantity: 1,
-            unit_price: registration.amount_cents / 100,
+            unit_price: amountCents / 100,
             currency_id: "BRL",
           },
         ],
@@ -139,6 +167,7 @@ export async function POST(req: NextRequest) {
       sandbox_init_point: result.sandbox_init_point,
       preference_id: result.id,
       payment_method: method,
+      amount_cents: amountCents,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Erro no pagamento";

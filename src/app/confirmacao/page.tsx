@@ -9,26 +9,32 @@ function Content() {
   const params = useSearchParams();
   const id = params.get("id");
   const status = params.get("status") || "pending";
-  const method = params.get("method"); // pix | card
+  const method = params.get("method");
 
   const methodLabel =
     method === "pix" ? "Pix" : method === "card" ? "Cartão de crédito" : null;
+
+  const isRegistered = status === "registered";
 
   const title =
     status === "success"
       ? "Ingresso confirmado!"
       : status === "failure"
         ? "Pagamento não concluído"
-        : "Pedido registrado";
+        : isRegistered
+          ? "Inscrição registrada!"
+          : "Pedido registrado";
 
   const message =
     status === "success"
       ? methodLabel
-        ? `Pagamento via ${methodLabel} aprovado. Guarde o código abaixo e aguarde o contato do organizador com o kit e instruções.`
-        : "Seu pagamento foi aprovado. Guarde o código abaixo e aguarde o contato do organizador com o kit e instruções."
+        ? `Pagamento via ${methodLabel} aprovado. Guarde o código e use Meu ingresso (CPF + senha) para ver o comprovante.`
+        : "Seu pagamento foi aprovado. Use Meu ingresso com CPF e senha para ver o comprovante."
       : status === "failure"
-        ? "Seu pedido foi criado, mas o pagamento falhou ou foi cancelado. Fale com o organizador ou tente de novo."
-        : "Recebemos seus dados. Conclua o pagamento (Pix ou cartão) para garantir a vaga.";
+        ? "O pagamento falhou ou foi cancelado. Entre em Meu ingresso e tente Comprar de novo."
+        : isRegistered
+          ? "Cadastro feito. A inscrição ainda não está paga. Entre em Meu ingresso (CPF + senha) e clique em Comprar para pagar."
+          : "Recebemos seus dados. Conclua o pagamento em Comprar para garantir a vaga.";
 
   return (
     <div className="mx-auto max-w-lg rounded-3xl border border-border bg-card p-8 shadow-xl text-center">
@@ -47,24 +53,24 @@ function Content() {
           Código: {id}
         </p>
       )}
-      <div className="flex flex-col sm:flex-row gap-2 justify-center">
-        {status !== "success" && id && (
+      <div className="flex flex-col sm:flex-row gap-2 justify-center flex-wrap">
+        {(isRegistered || status === "pending" || status === "failure") && (
           <Link
-            href={`/pagar?id=${id}&method=${method === "card" ? "card" : "pix"}`}
-            className="inline-flex justify-center rounded-full border border-border px-6 py-2.5 text-sm font-semibold hover:bg-white/5"
+            href="/comprar"
+            className="inline-flex justify-center rounded-full bg-brand px-6 py-2.5 text-sm font-bold text-white hover:bg-brand-dark"
           >
-            Ir ao pagamento
+            Comprar / pagar
           </Link>
         )}
         <Link
           href="/atleta"
           className="inline-flex justify-center rounded-full border border-border px-6 py-2.5 text-sm font-semibold hover:bg-white/5"
         >
-          Ver com CPF (área do atleta)
+          Meu ingresso (CPF + senha)
         </Link>
         <Link
           href="/"
-          className="inline-flex justify-center rounded-full bg-brand px-6 py-2.5 text-sm font-bold text-white hover:bg-brand-dark"
+          className="inline-flex justify-center rounded-full border border-border px-6 py-2.5 text-sm font-semibold hover:bg-white/5"
         >
           Voltar ao evento
         </Link>

@@ -106,6 +106,9 @@ create index if not exists registrations_full_name_idx on public.registrations(f
 alter table public.registrations add column if not exists coupon_code text;
 alter table public.registrations add column if not exists discount_cents integer not null default 0;
 
+-- Senha da área do atleta (CPF + senha; só quem se inscreveu)
+alter table public.registrations add column if not exists access_password_hash text;
+
 -- Cupons para lojas parceiras (ex: MODAPRAIA10 = 10%)
 create table if not exists public.coupons (
   id uuid primary key default gen_random_uuid(),
