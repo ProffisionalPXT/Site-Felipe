@@ -10,6 +10,13 @@ import { AdminCouponsTab } from "@/components/AdminCouponsTab";
 import { AdminPasswordTab } from "@/components/AdminPasswordTab";
 import { AdminPaymentTab } from "@/components/AdminPaymentTab";
 import { LayoutWirePreview } from "@/components/LayoutWirePreview";
+import {
+  ADMIN_SESSION_KEY,
+  clearTimedSession,
+  loadTimedSession,
+  saveTimedSession,
+  touchTimedSession,
+} from "@/lib/client-session";
 import { centsToReaisInput, formatBRL, reaisToCents } from "@/lib/format";
 import type { RegistrationStats } from "@/lib/registration-stats";
 import {
@@ -85,6 +92,21 @@ export default function AdminPage() {
   useEffect(() => {
     pollPwd.current = password;
   }, [password]);
+
+  // Restaura login admin (6 horas)
+  useEffect(() => {
+    const saved = loadTimedSession<{ password: string }>(ADMIN_SESSION_KEY);
+    if (saved?.password) {
+      setPassword(saved.password);
+      void loadAll(saved.password, {
+        q: "",
+        status: "all",
+        category: "all",
+        shirt: "all",
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function playNotifyBeep() {
     try {
@@ -224,9 +246,12 @@ export default function AdminPage() {
         setStats(listData.stats || null);
         setStatsFiltered(listData.stats_filtered || null);
         setAuthed(true);
+        saveTimedSession(ADMIN_SESSION_KEY, { password: pwd });
+        touchTimedSession(ADMIN_SESSION_KEY);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Erro");
         setAuthed(false);
+        clearTimedSession(ADMIN_SESSION_KEY);
       } finally {
         setLoading(false);
       }
@@ -600,7 +625,8 @@ export default function AdminPage() {
               </div>
             </div>
             <p className="text-sm text-muted">
-              Digite a senha do organizador para acessar o painel.
+              Digite a senha do organizador. A sessão fica ativa por{" "}
+              <strong className="text-white">6 horas</strong> neste navegador.
             </p>
             <input
               type="password"
@@ -671,6 +697,17 @@ export default function AdminPage() {
             >
               <span>↗</span> Ver site público
             </a>
+            <button
+              type="button"
+              onClick={() => {
+                clearTimedSession(ADMIN_SESSION_KEY);
+                setAuthed(false);
+                setPassword("");
+              }}
+              className="mt-2 mx-1 rounded-xl border border-white/10 px-3 py-2 text-xs text-muted hover:text-white hover:bg-white/5"
+            >
+              Sair do admin (encerra sessão 6h)
+            </button>
           </aside>
 
           <div className="admin-main">

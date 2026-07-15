@@ -3,6 +3,13 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { SiteHeader } from "@/components/SiteHeader";
+import {
+  ATHLETE_SESSION_KEY,
+  clearTimedSession,
+  loadTimedSession,
+  saveTimedSession,
+  touchTimedSession,
+} from "@/lib/client-session";
 import { formatBRL, formatDateLongBR } from "@/lib/format";
 
 type AthleteReg = {
@@ -26,7 +33,6 @@ type AthleteReg = {
 };
 
 type Session = { cpf: string; password: string };
-const SESSION_KEY = "athlete_session";
 
 export default function AtletaPage() {
   const [session, setSession] = useState<Session | null>(null);
@@ -54,14 +60,12 @@ export default function AtletaPage() {
       setSelected(list.length === 1 ? list[0] : null);
       const sess = { cpf: cpf.replace(/\D/g, ""), password };
       setSession(sess);
-      try {
-        sessionStorage.setItem(SESSION_KEY, JSON.stringify(sess));
-      } catch {
-        /* */
-      }
+      saveTimedSession(ATHLETE_SESSION_KEY, sess);
+      touchTimedSession(ATHLETE_SESSION_KEY);
     } catch (err) {
       setSession(null);
       setRegs(null);
+      clearTimedSession(ATHLETE_SESSION_KEY);
       setError(err instanceof Error ? err.message : "Erro");
     } finally {
       setLoggingIn(false);
@@ -70,17 +74,10 @@ export default function AtletaPage() {
   }
 
   useEffect(() => {
-    try {
-      const raw = sessionStorage.getItem(SESSION_KEY);
-      if (raw) {
-        const s = JSON.parse(raw) as Session;
-        if (s.cpf && s.password) {
-          void doLogin(s.cpf, s.password);
-          return;
-        }
-      }
-    } catch {
-      /* */
+    const saved = loadTimedSession<Session>(ATHLETE_SESSION_KEY);
+    if (saved?.cpf && saved?.password) {
+      void doLogin(saved.cpf, saved.password);
+      return;
     }
     setLoading(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -97,9 +94,9 @@ export default function AtletaPage() {
     setRegs(null);
     setSelected(null);
     try {
-      sessionStorage.removeItem(SESSION_KEY);
+      clearTimedSession(ATHLETE_SESSION_KEY);
     } catch {
-      /* */
+      clearTimedSession(ATHLETE_SESSION_KEY);
     }
   }
 
@@ -114,8 +111,8 @@ export default function AtletaPage() {
           Meu ingresso
         </h1>
         <p className="text-sm text-muted mt-1 leading-relaxed">
-          Acesso só para quem <strong className="text-foreground">já se inscreveu</strong>:
-          CPF + senha criados na inscrição. Quem não cadastrou não entra.
+          Login com CPF + senha (só quem se inscreveu). A sessão fica ativa{" "}
+          <strong className="text-foreground">6 horas</strong> neste navegador.
         </p>
 
         {loading && <p className="mt-8 text-muted">Carregando…</p>}

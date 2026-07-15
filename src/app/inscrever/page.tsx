@@ -4,6 +4,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import { SiteHeader } from "@/components/SiteHeader";
+import {
+  ATHLETE_SESSION_KEY,
+  saveTimedSession,
+} from "@/lib/client-session";
 import { formatDateBR } from "@/lib/format";
 import type { EventPublic } from "@/lib/types";
 
@@ -73,15 +77,11 @@ export default function InscreverPage() {
       const regId = data.registration.id as string;
       const cpfDigits = String(payload.cpf).replace(/\D/g, "");
 
-      // Mantém sessão local para já poder ir a Comprar
-      try {
-        sessionStorage.setItem(
-          "athlete_session",
-          JSON.stringify({ cpf: cpfDigits, password })
-        );
-      } catch {
-        /* */
-      }
+      // Sessão atleta 6h — Comprar ingresso já entra logado
+      saveTimedSession(ATHLETE_SESSION_KEY, {
+        cpf: cpfDigits,
+        password,
+      });
 
       router.push(
         `/confirmacao?id=${encodeURIComponent(regId)}&status=registered`

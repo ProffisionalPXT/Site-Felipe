@@ -4,6 +4,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { SiteHeader } from "@/components/SiteHeader";
+import {
+  ATHLETE_SESSION_KEY,
+  clearTimedSession,
+  loadTimedSession,
+  saveTimedSession,
+  touchTimedSession,
+} from "@/lib/client-session";
 import { formatBRL } from "@/lib/format";
 import { applyCardFeeCents } from "@/lib/payment-settings";
 import type { EventPublic } from "@/lib/types";
@@ -24,22 +31,19 @@ type AthleteReg = {
   event_name: string;
 };
 
-type Session = { cpf: string; password: string };
-const SESSION_KEY = "athlete_session";
+type AthleteSession = { cpf: string; password: string; exp?: number };
 
 /**
- * Comprar ingresso (sem aba no menu).
- * Logado: só categoria, tamanho e forma de pagamento.
- * Não logado: CPF + senha (só quem se inscreveu).
+ * Comprar ingresso:
+ * - Logado (6h): só modalidade, camisa e pagamento
+ * - Não logado: formulário completo + pagamento
  */
 export default function ComprarPage() {
   const router = useRouter();
   const [event, setEvent] = useState<EventPublic | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
+  const [session, setSession] = useState<AthleteSession | null>(null);
   const [regs, setRegs] = useState<AthleteReg[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loginError, setLoginError] = useState<string | null>(null);
-  const [loggingIn, setLoggingIn] = useState(false);
   const [payMethod, setPayMethod] = useState<PayMethod>("pix");
   const [acceptPix, setAcceptPix] = useState(true);
   const [acceptCard, setAcceptCard] = useState(true);
@@ -49,41 +53,28 @@ export default function ComprarPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [category, setCategory] = useState("");
   const [shirtSize, setShirtSize] = useState("");
+  const [guestSubmitting, setGuestSubmitting] = useState(false);
 
   const loginWith = useCallback(async (cpf: string, password: string) => {
-    setLoginError(null);
-    setLoggingIn(true);
-    try {
-      const res = await fetch("/api/atleta/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cpf, password }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Falha no acesso");
-      const list = (data.registrations || []) as AthleteReg[];
-      setRegs(list);
-      const pending = list.find((r) => r.can_pay) || list[0];
-      setSelectedId(pending?.id || null);
-      if (pending) {
-        setCategory(pending.category || "");
-        setShirtSize(pending.shirt_size || "");
-      }
-      const sess = { cpf: cpf.replace(/\D/g, ""), password };
-      setSession(sess);
-      try {
-        sessionStorage.setItem(SESSION_KEY, JSON.stringify(sess));
-      } catch {
-        /* */
-      }
-    } catch (e) {
-      setSession(null);
-      setRegs([]);
-      setLoginError(e instanceof Error ? e.message : "Erro");
-    } finally {
-      setLoggingIn(false);
-      setLoading(false);
+    const res = await fetch("/api/atleta/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ cpf, password }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Falha no acesso");
+    const list = (data.registrations || []) as AthleteReg[];
+    setRegs(list);
+    const pending = list.find((r) => r.can_pay) || list[0];
+    setSelectedId(pending?.id || null);
+    if (pending) {
+      setCategory(pending.category || "");
+      setShirtSize(pending.shirt_size || "");
     }
+    const sess = { cpf: cpf.replace(/\D/g, ""), password };
+    setSession(sess);
+    saveTimedSession(ATHLETE_SESSION_KEY, sess);
+    return list;
   }, []);
 
   useEffect(() => {
@@ -111,52 +102,70 @@ export default function ComprarPage() {
         if (!pixOk && cardOk) setPayMethod("card");
       })
       .catch(() => {})
-      .finally(() => {
-        try {
-          const raw = sessionStorage.getItem(SESSION_KEY);
-          if (raw) {
-            const s = JSON.parse(raw) as Session;
-            if (s.cpf && s.password) {
-              void loginWith(s.cpf, s.password);
-              return;
-            }
+      .finally(async () => {
+        const saved = loadTimedSession<AthleteSession>(ATHLETE_SESSION_KEY);
+        if (saved?.cpf && saved?.password) {
+          try {
+            await loginWith(saved.cpf, saved.password);
+          } catch {
+            clearTimedSession(ATHLETE_SESSION_KEY);
+            setSession(null);
           }
-        } catch {
-          /* */
         }
         setLoading(false);
       });
   }, [loginWith]);
 
-  async function onLoginForm(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const fd = new FormData(e.currentTarget);
-    await loginWith(String(fd.get("cpf") || ""), String(fd.get("password") || ""));
-  }
-
   function logout() {
     setSession(null);
     setRegs([]);
     setSelectedId(null);
-    try {
-      sessionStorage.removeItem(SESSION_KEY);
-    } catch {
-      /* */
-    }
+    clearTimedSession(ATHLETE_SESSION_KEY);
   }
 
   const selected = regs.find((r) => r.id === selectedId) || null;
-  const base =
-    selected?.amount_cents ?? event?.price_cents ?? 0;
+  const base = selected?.amount_cents ?? event?.price_cents ?? 0;
   const cardTotal = applyCardFeeCents(base, cardFeePercent);
   const payTotal = payMethod === "card" ? cardTotal : base;
 
-  async function startPay() {
+  async function runPayment(registrationId: string) {
+    const payRes = await fetch("/api/pagamento", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        registration_id: registrationId,
+        payment_method: payMethod,
+      }),
+    });
+    const payData = await payRes.json();
+
+    if (payRes.ok && (payData.init_point || payData.sandbox_init_point)) {
+      window.location.href = payData.init_point || payData.sandbox_init_point;
+      return;
+    }
+
+    if (payData.demo || payData.manual || !payRes.ok) {
+      const qs = new URLSearchParams({
+        id: registrationId,
+        method: payMethod,
+        amount: String(payData.amount_cents ?? payTotal),
+      });
+      router.push(`/pagar?${qs.toString()}`);
+      return;
+    }
+
+    router.push(
+      `/confirmacao?id=${registrationId}&status=pending&method=${payMethod}`
+    );
+  }
+
+  /** Logado: atualiza opções e paga */
+  async function startPayLogged() {
     if (!selected?.can_pay || !session) return;
     setPaying(true);
     setPayError(null);
     try {
-      // Atualiza categoria e tamanho antes de pagar
+      touchTimedSession(ATHLETE_SESSION_KEY);
       const up = await fetch(`/api/inscricoes/${selected.id}/pay-options`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -169,38 +178,66 @@ export default function ComprarPage() {
       });
       const upData = await up.json();
       if (!up.ok) throw new Error(upData.error || "Não foi possível salvar opções");
-
-      const payRes = await fetch("/api/pagamento", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          registration_id: selected.id,
-          payment_method: payMethod,
-        }),
-      });
-      const payData = await payRes.json();
-
-      if (payRes.ok && (payData.init_point || payData.sandbox_init_point)) {
-        window.location.href = payData.init_point || payData.sandbox_init_point;
-        return;
-      }
-
-      if (payData.demo || payData.manual || !payRes.ok) {
-        const qs = new URLSearchParams({
-          id: selected.id,
-          method: payMethod,
-          amount: String(payData.amount_cents ?? payTotal),
-        });
-        router.push(`/pagar?${qs.toString()}`);
-        return;
-      }
-
-      router.push(
-        `/confirmacao?id=${selected.id}&status=pending&method=${payMethod}`
-      );
+      await runPayment(selected.id);
     } catch (e) {
       setPayError(e instanceof Error ? e.message : "Erro no pagamento");
       setPaying(false);
+    }
+  }
+
+  /** Não logado: cria inscrição completa e vai ao pagamento */
+  async function onGuestSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!event) return;
+    setPayError(null);
+    setGuestSubmitting(true);
+
+    const fd = new FormData(e.currentTarget);
+    const password = String(fd.get("access_password") || "");
+    const password2 = String(fd.get("access_password2") || "");
+    if (password.length < 4) {
+      setPayError("Senha de acesso: mínimo 4 caracteres.");
+      setGuestSubmitting(false);
+      return;
+    }
+    if (password !== password2) {
+      setPayError("As senhas não coincidem.");
+      setGuestSubmitting(false);
+      return;
+    }
+
+    const payload = {
+      full_name: String(fd.get("full_name") || ""),
+      cpf: String(fd.get("cpf") || ""),
+      birth_date: String(fd.get("birth_date") || "") || null,
+      phone: String(fd.get("phone") || ""),
+      email: String(fd.get("email") || ""),
+      shirt_size: shirtSize,
+      category,
+      access_password: password,
+    };
+
+    try {
+      const res = await fetch("/api/inscricoes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Falha na inscrição");
+
+      const regId = data.registration.id as string;
+      const cpfDigits = payload.cpf.replace(/\D/g, "");
+      saveTimedSession(ATHLETE_SESSION_KEY, {
+        cpf: cpfDigits,
+        password,
+      });
+      setSession({ cpf: cpfDigits, password });
+
+      await runPayment(regId);
+    } catch (err) {
+      setPayError(err instanceof Error ? err.message : "Erro");
+      setGuestSubmitting(false);
     }
   }
 
@@ -214,68 +251,25 @@ export default function ComprarPage() {
         <h1 className="mt-3 text-2xl font-black tracking-tight">
           Comprar ingresso
         </h1>
-        <p className="text-sm text-muted mt-1">
+        <p className="text-sm text-muted mt-1 leading-relaxed">
           {session
-            ? "Escolha categoria, tamanho e forma de pagamento."
-            : "Entre com CPF e senha da inscrição. Quem não se cadastrou não acessa."}
+            ? "Você já está logado: escolha modalidade, camisa e pagamento."
+            : "Preencha todos os dados e pague. Se já tem inscrição, entre em Meu ingresso."}
         </p>
 
         {loading && <p className="mt-8 text-muted">Carregando…</p>}
 
-        {/* —— Não logado: só login —— */}
-        {!loading && !session && (
-          <form
-            onSubmit={onLoginForm}
-            className="mt-6 rounded-2xl border border-border bg-card p-5 space-y-4"
-          >
-            <p className="text-sm font-bold">Entrar</p>
-            <label className="block text-sm">
-              <span className="font-medium">CPF</span>
-              <input
-                name="cpf"
-                required
-                placeholder="000.000.000-00"
-                className="mt-1 w-full rounded-xl border border-border bg-card-2 px-3 py-3"
-              />
-            </label>
-            <label className="block text-sm">
-              <span className="font-medium">Senha de acesso</span>
-              <input
-                name="password"
-                type="password"
-                required
-                minLength={4}
-                className="mt-1 w-full rounded-xl border border-border bg-card-2 px-3 py-3"
-              />
-            </label>
-            {loginError && (
-              <p className="text-sm text-red-400 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2">
-                {loginError}
-              </p>
-            )}
-            <button
-              type="submit"
-              disabled={loggingIn}
-              className="w-full rounded-2xl bg-brand py-3.5 font-bold text-white disabled:opacity-60"
-            >
-              {loggingIn ? "Entrando…" : "Continuar"}
-            </button>
-            <p className="text-center text-xs text-muted">
-              Ainda não se inscreveu?{" "}
-              <Link href="/inscrever" className="text-brand-soft underline">
-                Fazer inscrição
-              </Link>
-            </p>
-          </form>
-        )}
-
-        {/* —— Logado: só categoria, tamanho e pagamento —— */}
-        {!loading && session && (
+        {/* —— LOGADO: só categoria, camisa, pagamento —— */}
+        {!loading && session && event && (
           <div className="mt-6 space-y-4">
             <div className="flex items-center justify-between gap-2 text-sm">
               <p className="text-muted">
+                Logado ·{" "}
                 <span className="text-foreground font-medium">
                   {regs[0]?.full_name || "Atleta"}
+                </span>
+                <span className="text-xs text-muted block sm:inline sm:ml-1">
+                  (sessão 6h)
                 </span>
               </p>
               <button
@@ -289,10 +283,11 @@ export default function ComprarPage() {
 
             {regs.length === 0 && (
               <p className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm">
-                Nenhuma inscrição.{" "}
+                Nenhuma inscrição. Use o formulário completo abaixo após sair, ou{" "}
                 <Link href="/inscrever" className="underline text-brand-soft">
-                  Fazer inscrição
+                  Inscrição
                 </Link>
+                .
               </p>
             )}
 
@@ -326,121 +321,340 @@ export default function ComprarPage() {
                 <p className="font-bold text-emerald-400">
                   {selected.has_receipt ? "Já está pago" : selected.status_label}
                 </p>
-                <p className="text-sm text-muted">
-                  {selected.event_name} · {selected.category}
-                </p>
-                <Link
-                  href="/atleta"
-                  className="inline-flex text-sm text-brand-soft underline"
-                >
+                <Link href="/atleta" className="text-sm text-brand-soft underline">
                   Ver em Meu ingresso
                 </Link>
               </div>
             )}
 
-            {selected?.can_pay && event && (
-              <div className="rounded-2xl border border-border bg-card p-5 space-y-4">
-                <p className="text-xs uppercase text-muted font-semibold">
-                  Opções do ingresso
-                </p>
-
-                <div>
-                  <label className="block text-sm font-medium mb-1.5">
-                    Categoria
-                  </label>
-                  <select
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    className="w-full rounded-xl border border-border bg-card-2 px-3 py-3"
-                  >
-                    {event.categories.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-1.5">
-                    Tamanho da camiseta
-                  </label>
-                  <select
-                    value={shirtSize}
-                    onChange={(e) => setShirtSize(e.target.value)}
-                    className="w-full rounded-xl border border-border bg-card-2 px-3 py-3"
-                  >
-                    {event.shirt_sizes.map((s) => (
-                      <option key={s} value={s}>
-                        {s}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <p className="text-sm font-medium mb-2">Forma de pagamento</p>
-                  <div className="grid grid-cols-2 gap-3">
-                    {acceptPix && (
-                      <button
-                        type="button"
-                        onClick={() => setPayMethod("pix")}
-                        className={
-                          payMethod === "pix"
-                            ? "rounded-2xl border-2 border-brand bg-brand/10 p-4 text-left"
-                            : "rounded-2xl border border-border p-4 text-left"
-                        }
-                      >
-                        <p className="font-bold">Pix</p>
-                        <p className="text-sm text-brand-soft mt-1">
-                          {formatBRL(base)}
-                        </p>
-                      </button>
-                    )}
-                    {acceptCard && (
-                      <button
-                        type="button"
-                        onClick={() => setPayMethod("card")}
-                        className={
-                          payMethod === "card"
-                            ? "rounded-2xl border-2 border-brand bg-brand/10 p-4 text-left"
-                            : "rounded-2xl border border-border p-4 text-left"
-                        }
-                      >
-                        <p className="font-bold">Cartão</p>
-                        <p className="text-sm text-brand-soft mt-1">
-                          {formatBRL(cardTotal)}
-                          {cardFeePercent > 0 && (
-                            <span className="text-xs text-muted">
-                              {" "}
-                              (+{cardFeePercent}%)
-                            </span>
-                          )}
-                        </p>
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {payError && (
-                  <p className="text-sm text-red-400">{payError}</p>
-                )}
-
-                <button
-                  type="button"
-                  disabled={paying || (!acceptPix && !acceptCard)}
-                  onClick={() => void startPay()}
-                  className="w-full rounded-2xl bg-brand py-3.5 font-bold text-white hover:bg-brand-dark disabled:opacity-60"
-                >
-                  {paying
-                    ? "Abrindo pagamento…"
-                    : `Pagar · ${formatBRL(payTotal)}`}
-                </button>
-              </div>
+            {selected?.can_pay && (
+              <PayOptions
+                event={event}
+                category={category}
+                setCategory={setCategory}
+                shirtSize={shirtSize}
+                setShirtSize={setShirtSize}
+                payMethod={payMethod}
+                setPayMethod={setPayMethod}
+                acceptPix={acceptPix}
+                acceptCard={acceptCard}
+                base={base}
+                cardTotal={cardTotal}
+                cardFeePercent={cardFeePercent}
+                payTotal={payTotal}
+                paying={paying}
+                payError={payError}
+                onPay={() => void startPayLogged()}
+              />
             )}
           </div>
         )}
+
+        {/* —— NÃO LOGADO: formulário completo + pagamento —— */}
+        {!loading && !session && event && (
+          <form
+            onSubmit={onGuestSubmit}
+            className="mt-6 space-y-4 rounded-2xl border border-border bg-card p-5"
+          >
+            <p className="text-sm font-bold text-white">Dados da inscrição</p>
+
+            <Field label="Nome completo" name="full_name" required />
+            <Field
+              label="CPF"
+              name="cpf"
+              required
+              placeholder="000.000.000-00"
+            />
+            <Field label="Data de nascimento" name="birth_date" type="date" />
+            <Field
+              label="WhatsApp"
+              name="phone"
+              required
+              placeholder="(00) 00000-0000"
+            />
+            <Field label="E-mail" name="email" type="email" required />
+
+            <div>
+              <label className="block text-sm font-medium mb-1.5">
+                Modalidade / categoria
+              </label>
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                required
+                className="w-full rounded-xl border border-border bg-card-2 px-3 py-3"
+              >
+                {event.categories.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1.5">
+                Tamanho da camiseta
+              </label>
+              <select
+                value={shirtSize}
+                onChange={(e) => setShirtSize(e.target.value)}
+                required
+                className="w-full rounded-xl border border-border bg-card-2 px-3 py-3"
+              >
+                {event.shirt_sizes.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="rounded-xl border border-border bg-card-2/40 p-3 space-y-3">
+              <p className="text-xs text-muted">
+                Crie uma senha para entrar depois em Meu ingresso (válida 6h por
+                sessão no navegador).
+              </p>
+              <Field
+                label="Senha de acesso"
+                name="access_password"
+                type="password"
+                required
+                placeholder="Mín. 4 caracteres"
+              />
+              <Field
+                label="Confirmar senha"
+                name="access_password2"
+                type="password"
+                required
+              />
+            </div>
+
+            <PayMethodOnly
+              payMethod={payMethod}
+              setPayMethod={setPayMethod}
+              acceptPix={acceptPix}
+              acceptCard={acceptCard}
+              base={event.price_cents}
+              cardTotal={applyCardFeeCents(event.price_cents, cardFeePercent)}
+              cardFeePercent={cardFeePercent}
+            />
+
+            {payError && (
+              <p className="text-sm text-red-400 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2">
+                {payError}
+              </p>
+            )}
+
+            <button
+              type="submit"
+              disabled={guestSubmitting || (!acceptPix && !acceptCard)}
+              className="w-full rounded-2xl bg-brand py-3.5 font-bold text-white disabled:opacity-60"
+            >
+              {guestSubmitting
+                ? "Processando…"
+                : `Confirmar e pagar · ${formatBRL(
+                    payMethod === "card"
+                      ? applyCardFeeCents(event.price_cents, cardFeePercent)
+                      : event.price_cents
+                  )}`}
+            </button>
+
+            <p className="text-center text-xs text-muted">
+              Já tem inscrição?{" "}
+              <Link href="/atleta" className="text-brand-soft underline">
+                Meu ingresso (login)
+              </Link>
+            </p>
+          </form>
+        )}
       </main>
+    </div>
+  );
+}
+
+function PayOptions({
+  event,
+  category,
+  setCategory,
+  shirtSize,
+  setShirtSize,
+  payMethod,
+  setPayMethod,
+  acceptPix,
+  acceptCard,
+  base,
+  cardTotal,
+  cardFeePercent,
+  payTotal,
+  paying,
+  payError,
+  onPay,
+}: {
+  event: EventPublic;
+  category: string;
+  setCategory: (v: string) => void;
+  shirtSize: string;
+  setShirtSize: (v: string) => void;
+  payMethod: PayMethod;
+  setPayMethod: (v: PayMethod) => void;
+  acceptPix: boolean;
+  acceptCard: boolean;
+  base: number;
+  cardTotal: number;
+  cardFeePercent: number;
+  payTotal: number;
+  paying: boolean;
+  payError: string | null;
+  onPay: () => void;
+}) {
+  return (
+    <div className="rounded-2xl border border-border bg-card p-5 space-y-4">
+      <p className="text-xs uppercase text-muted font-semibold">
+        Modalidade, camisa e pagamento
+      </p>
+
+      <div>
+        <label className="block text-sm font-medium mb-1.5">Modalidade</label>
+        <select
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+          className="w-full rounded-xl border border-border bg-card-2 px-3 py-3"
+        >
+          {event.categories.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-1.5">
+          Tamanho da camiseta
+        </label>
+        <select
+          value={shirtSize}
+          onChange={(e) => setShirtSize(e.target.value)}
+          className="w-full rounded-xl border border-border bg-card-2 px-3 py-3"
+        >
+          {event.shirt_sizes.map((s) => (
+            <option key={s} value={s}>
+              {s}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <PayMethodOnly
+        payMethod={payMethod}
+        setPayMethod={setPayMethod}
+        acceptPix={acceptPix}
+        acceptCard={acceptCard}
+        base={base}
+        cardTotal={cardTotal}
+        cardFeePercent={cardFeePercent}
+      />
+
+      {payError && <p className="text-sm text-red-400">{payError}</p>}
+
+      <button
+        type="button"
+        disabled={paying || (!acceptPix && !acceptCard)}
+        onClick={onPay}
+        className="w-full rounded-2xl bg-brand py-3.5 font-bold text-white hover:bg-brand-dark disabled:opacity-60"
+      >
+        {paying ? "Abrindo pagamento…" : `Pagar · ${formatBRL(payTotal)}`}
+      </button>
+    </div>
+  );
+}
+
+function PayMethodOnly({
+  payMethod,
+  setPayMethod,
+  acceptPix,
+  acceptCard,
+  base,
+  cardTotal,
+  cardFeePercent,
+}: {
+  payMethod: PayMethod;
+  setPayMethod: (v: PayMethod) => void;
+  acceptPix: boolean;
+  acceptCard: boolean;
+  base: number;
+  cardTotal: number;
+  cardFeePercent: number;
+}) {
+  return (
+    <div>
+      <p className="text-sm font-medium mb-2">Forma de pagamento</p>
+      <div className="grid grid-cols-2 gap-3">
+        {acceptPix && (
+          <button
+            type="button"
+            onClick={() => setPayMethod("pix")}
+            className={
+              payMethod === "pix"
+                ? "rounded-2xl border-2 border-brand bg-brand/10 p-4 text-left"
+                : "rounded-2xl border border-border p-4 text-left"
+            }
+          >
+            <p className="font-bold">Pix</p>
+            <p className="text-sm text-brand-soft mt-1">{formatBRL(base)}</p>
+          </button>
+        )}
+        {acceptCard && (
+          <button
+            type="button"
+            onClick={() => setPayMethod("card")}
+            className={
+              payMethod === "card"
+                ? "rounded-2xl border-2 border-brand bg-brand/10 p-4 text-left"
+                : "rounded-2xl border border-border p-4 text-left"
+            }
+          >
+            <p className="font-bold">Cartão</p>
+            <p className="text-sm text-brand-soft mt-1">
+              {formatBRL(cardTotal)}
+              {cardFeePercent > 0 && (
+                <span className="text-xs text-muted"> (+{cardFeePercent}%)</span>
+              )}
+            </p>
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function Field({
+  label,
+  name,
+  type = "text",
+  required,
+  placeholder,
+}: {
+  label: string;
+  name: string;
+  type?: string;
+  required?: boolean;
+  placeholder?: string;
+}) {
+  return (
+    <div>
+      <label className="block text-sm font-medium mb-1.5" htmlFor={name}>
+        {label}
+      </label>
+      <input
+        id={name}
+        name={name}
+        type={type}
+        required={required}
+        placeholder={placeholder}
+        className="w-full rounded-xl border border-border bg-card-2 px-3 py-3 outline-none focus:ring-2 focus:ring-brand/40"
+      />
     </div>
   );
 }
