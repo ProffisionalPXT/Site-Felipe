@@ -154,7 +154,7 @@ export default function HomePage() {
                   </p>
                 </div>
                 <a
-                  href="/inscrever"
+                  href="/comprar"
                   className="rounded-full bg-brand px-6 py-3 text-sm font-bold text-white"
                 >
                   Comprar

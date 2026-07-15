@@ -70,7 +70,7 @@ function Content() {
 
   return (
     <div className="mx-auto w-full max-w-md">
-      <Link href="/inscrever" className="text-sm text-muted hover:text-foreground">
+      <Link href="/comprar" className="text-sm text-muted hover:text-foreground">
         ← Voltar
       </Link>
       <h1 className="mt-3 text-2xl font-black tracking-tight">Pagamento</h1>

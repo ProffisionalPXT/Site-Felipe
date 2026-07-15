@@ -11,14 +11,12 @@ const TABS = [
     match: (p: string) => p.startsWith("/inscrever"),
   },
   {
-    href: "/comprar",
-    label: "Comprar",
-    match: (p: string) => p.startsWith("/comprar") || p.startsWith("/pagar"),
-  },
-  {
     href: "/atleta",
     label: "Meu ingresso",
-    match: (p: string) => p.startsWith("/atleta"),
+    match: (p: string) =>
+      p.startsWith("/atleta") ||
+      p.startsWith("/comprar") ||
+      p.startsWith("/pagar"),
   },
 ] as const;
 
@@ -28,12 +26,12 @@ export function SiteHeader({ solid = false }: { solid?: boolean }) {
   const tabClass = (active: boolean) => {
     if (solid) {
       return active
-        ? "rounded-full bg-brand px-3 py-2 font-semibold text-white text-xs sm:text-sm"
-        : "rounded-full border border-border px-3 py-2 font-medium text-muted hover:text-foreground hover:bg-slate-100 transition text-xs sm:text-sm";
+        ? "rounded-full bg-brand px-3.5 py-2 font-semibold text-white text-xs sm:text-sm"
+        : "rounded-full border border-border px-3.5 py-2 font-medium text-muted hover:text-foreground hover:bg-slate-100 transition text-xs sm:text-sm";
     }
     return active
-      ? "rounded-full bg-brand px-3 py-2 font-semibold text-white shadow-lg shadow-orange-900/30 text-xs sm:text-sm"
-      : "rounded-full border border-white/25 bg-white/10 px-3 py-2 font-medium text-white/90 hover:bg-white/20 transition text-xs sm:text-sm";
+      ? "rounded-full bg-brand px-3.5 py-2 font-semibold text-white shadow-lg shadow-orange-900/30 text-xs sm:text-sm"
+      : "rounded-full border border-white/25 bg-white/10 px-3.5 py-2 font-medium text-white/90 hover:bg-white/20 transition text-xs sm:text-sm";
   };
 
   return (
@@ -65,7 +63,7 @@ export function SiteHeader({ solid = false }: { solid?: boolean }) {
         </Link>
 
         <nav
-          className="flex flex-1 items-center justify-end sm:justify-center gap-1 sm:gap-1.5 overflow-x-auto"
+          className="flex flex-1 items-center justify-end sm:justify-center gap-1.5 sm:gap-2 overflow-x-auto"
           aria-label="Menu principal"
         >
           {TABS.map((tab) => {

@@ -6,6 +6,7 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 import { SiteHeader } from "@/components/SiteHeader";
 import { formatBRL } from "@/lib/format";
 import { applyCardFeeCents } from "@/lib/payment-settings";
+import type { EventPublic } from "@/lib/types";
 
 type PayMethod = "pix" | "card";
 
@@ -13,6 +14,7 @@ type AthleteReg = {
   id: string;
   full_name: string;
   category: string;
+  shirt_size: string;
   status: string;
   status_label: string;
   amount_cents: number;
@@ -23,15 +25,16 @@ type AthleteReg = {
 };
 
 type Session = { cpf: string; password: string };
-
 const SESSION_KEY = "athlete_session";
 
 /**
- * Pagamento: só com login (CPF + senha de quem se inscreveu).
- * Mostra apenas opções de pagar.
+ * Comprar ingresso (sem aba no menu).
+ * Logado: só categoria, tamanho e forma de pagamento.
+ * Não logado: CPF + senha (só quem se inscreveu).
  */
 export default function ComprarPage() {
   const router = useRouter();
+  const [event, setEvent] = useState<EventPublic | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [regs, setRegs] = useState<AthleteReg[]>([]);
   const [loading, setLoading] = useState(true);
@@ -44,11 +47,58 @@ export default function ComprarPage() {
   const [paying, setPaying] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [category, setCategory] = useState("");
+  const [shirtSize, setShirtSize] = useState("");
 
-  const loadPaymentOpts = useCallback(() => {
+  const loginWith = useCallback(async (cpf: string, password: string) => {
+    setLoginError(null);
+    setLoggingIn(true);
+    try {
+      const res = await fetch("/api/atleta/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cpf, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Falha no acesso");
+      const list = (data.registrations || []) as AthleteReg[];
+      setRegs(list);
+      const pending = list.find((r) => r.can_pay) || list[0];
+      setSelectedId(pending?.id || null);
+      if (pending) {
+        setCategory(pending.category || "");
+        setShirtSize(pending.shirt_size || "");
+      }
+      const sess = { cpf: cpf.replace(/\D/g, ""), password };
+      setSession(sess);
+      try {
+        sessionStorage.setItem(SESSION_KEY, JSON.stringify(sess));
+      } catch {
+        /* */
+      }
+    } catch (e) {
+      setSession(null);
+      setRegs([]);
+      setLoginError(e instanceof Error ? e.message : "Erro");
+    } finally {
+      setLoggingIn(false);
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
     fetch("/api/event")
       .then((r) => r.json())
       .then((d) => {
+        if (d.event) {
+          setEvent(d.event);
+          setCategory(d.event.categories?.[0] || "");
+          setShirtSize(
+            d.event.shirt_sizes?.includes("M")
+              ? "M"
+              : d.event.shirt_sizes?.[0] || ""
+          );
+        }
         const pixOk = d.payment?.accept_pix !== false;
         const cardOk = d.payment?.accept_card !== false;
         setAcceptPix(pixOk);
@@ -60,60 +110,23 @@ export default function ComprarPage() {
         );
         if (!pixOk && cardOk) setPayMethod("card");
       })
-      .catch(() => {});
-  }, []);
-
-  const loginWith = useCallback(
-    async (cpf: string, password: string) => {
-      setLoginError(null);
-      setLoggingIn(true);
-      try {
-        const res = await fetch("/api/atleta/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ cpf, password }),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Falha no acesso");
-        const list = (data.registrations || []) as AthleteReg[];
-        setRegs(list);
-        const pending = list.find((r) => r.can_pay) || list[0];
-        setSelectedId(pending?.id || null);
-        const sess = { cpf: cpf.replace(/\D/g, ""), password };
-        setSession(sess);
+      .catch(() => {})
+      .finally(() => {
         try {
-          sessionStorage.setItem(SESSION_KEY, JSON.stringify(sess));
+          const raw = sessionStorage.getItem(SESSION_KEY);
+          if (raw) {
+            const s = JSON.parse(raw) as Session;
+            if (s.cpf && s.password) {
+              void loginWith(s.cpf, s.password);
+              return;
+            }
+          }
         } catch {
           /* */
         }
-      } catch (e) {
-        setSession(null);
-        setRegs([]);
-        setLoginError(e instanceof Error ? e.message : "Erro");
-      } finally {
-        setLoggingIn(false);
         setLoading(false);
-      }
-    },
-    []
-  );
-
-  useEffect(() => {
-    loadPaymentOpts();
-    try {
-      const raw = sessionStorage.getItem(SESSION_KEY);
-      if (raw) {
-        const s = JSON.parse(raw) as Session;
-        if (s.cpf && s.password) {
-          void loginWith(s.cpf, s.password);
-          return;
-        }
-      }
-    } catch {
-      /* */
-    }
-    setLoading(false);
-  }, [loadPaymentOpts, loginWith]);
+      });
+  }, [loginWith]);
 
   async function onLoginForm(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -133,23 +146,36 @@ export default function ComprarPage() {
   }
 
   const selected = regs.find((r) => r.id === selectedId) || null;
-  const base = selected?.amount_cents ?? 0;
+  const base =
+    selected?.amount_cents ?? event?.price_cents ?? 0;
   const cardTotal = applyCardFeeCents(base, cardFeePercent);
   const payTotal = payMethod === "card" ? cardTotal : base;
 
   async function startPay() {
-    if (!selected?.can_pay) return;
+    if (!selected?.can_pay || !session) return;
     setPaying(true);
     setPayError(null);
     try {
-      // Atualiza valor se cartão (recalcula no servidor via pagamento + method)
+      // Atualiza categoria e tamanho antes de pagar
+      const up = await fetch(`/api/inscricoes/${selected.id}/pay-options`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          cpf: session.cpf,
+          password: session.password,
+          category,
+          shirt_size: shirtSize,
+        }),
+      });
+      const upData = await up.json();
+      if (!up.ok) throw new Error(upData.error || "Não foi possível salvar opções");
+
       const payRes = await fetch("/api/pagamento", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           registration_id: selected.id,
           payment_method: payMethod,
-          apply_card_fee: payMethod === "card",
         }),
       });
       const payData = await payRes.json();
@@ -185,27 +211,24 @@ export default function ComprarPage() {
         <Link href="/" className="text-sm text-muted hover:text-foreground">
           ← Voltar ao evento
         </Link>
-        <h1 className="mt-3 text-2xl font-black tracking-tight">Comprar</h1>
+        <h1 className="mt-3 text-2xl font-black tracking-tight">
+          Comprar ingresso
+        </h1>
         <p className="text-sm text-muted mt-1">
-          Pagamento do ingresso. Só quem já fez a{" "}
-          <Link href="/inscrever" className="text-brand-soft underline">
-            inscrição
-          </Link>{" "}
-          (CPF + senha) consegue pagar.
+          {session
+            ? "Escolha categoria, tamanho e forma de pagamento."
+            : "Entre com CPF e senha da inscrição. Quem não se cadastrou não acessa."}
         </p>
 
         {loading && <p className="mt-8 text-muted">Carregando…</p>}
 
+        {/* —— Não logado: só login —— */}
         {!loading && !session && (
           <form
             onSubmit={onLoginForm}
             className="mt-6 rounded-2xl border border-border bg-card p-5 space-y-4"
           >
-            <p className="text-sm font-bold">Entrar para pagar</p>
-            <p className="text-xs text-muted">
-              Use o mesmo CPF e a senha definidos na inscrição. Quem não se
-              cadastrou não tem acesso.
-            </p>
+            <p className="text-sm font-bold">Entrar</p>
             <label className="block text-sm">
               <span className="font-medium">CPF</span>
               <input
@@ -235,10 +258,10 @@ export default function ComprarPage() {
               disabled={loggingIn}
               className="w-full rounded-2xl bg-brand py-3.5 font-bold text-white disabled:opacity-60"
             >
-              {loggingIn ? "Entrando…" : "Entrar e ver pagamento"}
+              {loggingIn ? "Entrando…" : "Continuar"}
             </button>
             <p className="text-center text-xs text-muted">
-              Ainda não tem inscrição?{" "}
+              Ainda não se inscreveu?{" "}
               <Link href="/inscrever" className="text-brand-soft underline">
                 Fazer inscrição
               </Link>
@@ -246,11 +269,11 @@ export default function ComprarPage() {
           </form>
         )}
 
+        {/* —— Logado: só categoria, tamanho e pagamento —— */}
         {!loading && session && (
           <div className="mt-6 space-y-4">
             <div className="flex items-center justify-between gap-2 text-sm">
               <p className="text-muted">
-                Logado ·{" "}
                 <span className="text-foreground font-medium">
                   {regs[0]?.full_name || "Atleta"}
                 </span>
@@ -266,7 +289,7 @@ export default function ComprarPage() {
 
             {regs.length === 0 && (
               <p className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm">
-                Nenhuma inscrição encontrada.{" "}
+                Nenhuma inscrição.{" "}
                 <Link href="/inscrever" className="underline text-brand-soft">
                   Fazer inscrição
                 </Link>
@@ -278,7 +301,15 @@ export default function ComprarPage() {
                 <span className="font-medium">Inscrição</span>
                 <select
                   value={selectedId || ""}
-                  onChange={(e) => setSelectedId(e.target.value)}
+                  onChange={(e) => {
+                    const id = e.target.value;
+                    setSelectedId(id);
+                    const r = regs.find((x) => x.id === id);
+                    if (r) {
+                      setCategory(r.category);
+                      setShirtSize(r.shirt_size);
+                    }
+                  }}
                   className="mt-1 w-full rounded-xl border border-border bg-card px-3 py-3"
                 >
                   {regs.map((r) => (
@@ -293,33 +324,58 @@ export default function ComprarPage() {
             {selected && !selected.can_pay && (
               <div className="rounded-2xl border border-border bg-card p-5 space-y-2">
                 <p className="font-bold text-emerald-400">
-                  {selected.has_receipt
-                    ? "Já está pago"
-                    : selected.status_label}
+                  {selected.has_receipt ? "Já está pago" : selected.status_label}
                 </p>
                 <p className="text-sm text-muted">
                   {selected.event_name} · {selected.category}
                 </p>
-                <p className="text-lg font-black">{selected.amount_label}</p>
                 <Link
                   href="/atleta"
                   className="inline-flex text-sm text-brand-soft underline"
                 >
-                  Ver comprovante em Meu ingresso
+                  Ver em Meu ingresso
                 </Link>
               </div>
             )}
 
-            {selected?.can_pay && (
+            {selected?.can_pay && event && (
               <div className="rounded-2xl border border-border bg-card p-5 space-y-4">
+                <p className="text-xs uppercase text-muted font-semibold">
+                  Opções do ingresso
+                </p>
+
                 <div>
-                  <p className="text-xs uppercase text-muted font-semibold">
-                    Pagar inscrição
-                  </p>
-                  <p className="font-bold mt-1">{selected.event_name}</p>
-                  <p className="text-sm text-muted">
-                    {selected.full_name} · {selected.category}
-                  </p>
+                  <label className="block text-sm font-medium mb-1.5">
+                    Categoria
+                  </label>
+                  <select
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    className="w-full rounded-xl border border-border bg-card-2 px-3 py-3"
+                  >
+                    {event.categories.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1.5">
+                    Tamanho da camiseta
+                  </label>
+                  <select
+                    value={shirtSize}
+                    onChange={(e) => setShirtSize(e.target.value)}
+                    className="w-full rounded-xl border border-border bg-card-2 px-3 py-3"
+                  >
+                    {event.shirt_sizes.map((s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>
@@ -365,23 +421,6 @@ export default function ComprarPage() {
                     )}
                   </div>
                 </div>
-
-                {payMethod === "card" && cardFeePercent > 0 && (
-                  <div className="text-sm space-y-1 rounded-xl bg-card-2/50 border border-border px-3 py-2">
-                    <p className="flex justify-between text-muted">
-                      <span>Ingresso</span>
-                      <span>{formatBRL(base)}</span>
-                    </p>
-                    <p className="flex justify-between text-muted">
-                      <span>Taxa cartão ({cardFeePercent}%)</span>
-                      <span>{formatBRL(cardTotal - base)}</span>
-                    </p>
-                    <p className="flex justify-between font-bold pt-1 border-t border-border">
-                      <span>Total</span>
-                      <span className="text-brand-soft">{formatBRL(cardTotal)}</span>
-                    </p>
-                  </div>
-                )}
 
                 {payError && (
                   <p className="text-sm text-red-400">{payError}</p>

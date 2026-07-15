@@ -85,7 +85,7 @@ export function TicketCard({
 
       {canBuy ? (
         <Link
-          href="/inscrever"
+          href="/comprar"
           className="mt-6 flex w-full items-center justify-center rounded-2xl bg-brand py-3.5 text-base font-bold text-white hover:bg-brand-dark transition"
         >
           Comprar ingresso
@@ -301,7 +301,7 @@ function LayoutPoster(p: Props) {
             <div className="flex-1 min-w-[1rem]" />
             {canBuy ? (
               <Link
-                href="/inscrever"
+                href="/comprar"
                 className="rounded-lg border border-white/40 px-5 py-2.5 text-sm font-semibold text-white hover:bg-white/10"
               >
                 Saiba Mais
@@ -346,7 +346,7 @@ function LayoutRevista(p: Props) {
             Home
           </a>
           <a href="/inscrever" className="hover:text-white">
-            Inscrições
+            Inscrição
           </a>
           <a href="#galeria" className="hover:text-white">
             Galeria
@@ -390,7 +390,7 @@ function LayoutRevista(p: Props) {
           </p>
           {canBuy && (
             <Link
-              href="/inscrever"
+              href="/comprar"
               className="inline-flex justify-center rounded-xl bg-brand px-6 py-2.5 text-sm font-bold text-white hover:bg-brand-dark"
             >
               Inscreva-se · {formatBRL(event.price_cents)}
@@ -458,7 +458,7 @@ function LayoutNeon(p: Props) {
           </div>
           {canBuy && (
             <Link
-              href="/inscrever"
+              href="/comprar"
               className="mt-8 rounded-full bg-brand px-10 py-4 text-lg font-black text-white shadow-[0_0_40px_var(--brand)] hover:bg-brand-dark"
             >
               Garantir vaga
@@ -547,7 +547,7 @@ function LayoutStadium(p: Props) {
           </div>
           {canBuy && (
             <Link
-              href="/inscrever"
+              href="/comprar"
               className="mt-10 inline-flex rounded-2xl bg-brand px-12 py-4 text-lg font-bold text-white hover:bg-brand-dark shadow-xl"
             >
               Comprar · {formatBRL(event.price_cents)}
