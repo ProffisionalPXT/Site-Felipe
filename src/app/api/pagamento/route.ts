@@ -30,10 +30,27 @@ export async function POST(req: NextRequest) {
 
   const method = parsed.data.payment_method || "pix";
 
+  if (!isSupabaseConfigured()) {
+    return NextResponse.json({ error: "Supabase não configurado." }, { status: 503 });
+  }
+
+  const supabase = getServiceSupabase();
+  const { data: registration, error } = await supabase
+    .from("registrations")
+    .select("*, events(name)")
+    .eq("id", parsed.data.registration_id)
+    .single();
+
+  if (error || !registration) {
+    return NextResponse.json({ error: "Inscrição não encontrada." }, { status: 404 });
+  }
+
+  const eventId = registration.event_id;
+
   // Demo (sem banco real) → sempre tela /pagar simulada
   if (isDemoMode()) {
-    const payPub = await getPaymentSettingsPublic();
-    const base = 8900;
+    const payPub = await getPaymentSettingsPublic(eventId);
+    const base = Number(registration.amount_cents) || 0;
     const amount =
       method === "card"
         ? applyCardFeeCents(base, payPub.card_fee_percent)
@@ -47,11 +64,7 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  if (!isSupabaseConfigured()) {
-    return NextResponse.json({ error: "Supabase não configurado." }, { status: 503 });
-  }
-
-  const token = await getMercadoPagoAccessToken();
+  const token = await getMercadoPagoAccessToken(eventId);
   if (!token) {
     return NextResponse.json(
       {
@@ -65,17 +78,6 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const supabase = getServiceSupabase();
-    const { data: registration, error } = await supabase
-      .from("registrations")
-      .select("*, events(name)")
-      .eq("id", parsed.data.registration_id)
-      .single();
-
-    if (error || !registration) {
-      return NextResponse.json({ error: "Inscrição não encontrada." }, { status: 404 });
-    }
-
     if (registration.status === "paid") {
       return NextResponse.json({ error: "Inscrição já está paga." }, { status: 400 });
     }
@@ -84,14 +86,11 @@ export async function POST(req: NextRequest) {
     }
 
     // Valor: base da inscrição; cartão pode incluir taxa
-    const payPub = await getPaymentSettingsPublic();
+    const payPub = await getPaymentSettingsPublic(eventId);
     let amountCents = Number(registration.amount_cents) || 0;
     // amount_cents na inscrição é o preço base (sem taxa); aplica taxa no cartão
     if (method === "card" && payPub.card_fee_percent > 0) {
-      // Se já tiver sido gravado com taxa, evita dobrar: usa o menor razoável
       const withFee = applyCardFeeCents(
-        // reverte se já tinha taxa gravada? preferimos base do evento via amount original
-        // amount_cents na inscrição é base sem taxa de cartão
         amountCents,
         payPub.card_fee_percent
       );
@@ -158,7 +157,7 @@ export async function POST(req: NextRequest) {
           pending: `${appUrl}/confirmacao?id=${registration.id}&status=pending&method=${method}`,
         },
         auto_return: "approved",
-        notification_url: `${appUrl}/api/webhook/mercadopago`,
+        notification_url: `${appUrl}/api/webhook/mercadopago?eventId=${eventId}`,
       },
     });
 

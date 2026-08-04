@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import { SiteHeader } from "@/components/SiteHeader";
 import {
@@ -17,6 +17,8 @@ import type { EventPublic } from "@/lib/types";
  */
 export default function InscreverPage() {
   const router = useRouter();
+  const params = useParams();
+  const eventId = params?.id as string;
   const [event, setEvent] = useState<EventPublic | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -24,7 +26,8 @@ export default function InscreverPage() {
   const [formError, setFormError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/event")
+    if (!eventId) return;
+    fetch(`/api/event?id=${eventId}`)
       .then(async (r) => {
         const data = await r.json();
         if (!r.ok) throw new Error(data.error || "Erro");
@@ -32,7 +35,7 @@ export default function InscreverPage() {
       })
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
-  }, []);
+  }, [eventId]);
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -40,21 +43,11 @@ export default function InscreverPage() {
     setSubmitting(true);
 
     const fd = new FormData(e.currentTarget);
-    const password = String(fd.get("access_password") || "");
-    const password2 = String(fd.get("access_password2") || "");
-
-    if (password.length < 4) {
-      setFormError("A senha de acesso precisa ter no mínimo 4 caracteres.");
-      setSubmitting(false);
-      return;
-    }
-    if (password !== password2) {
-      setFormError("As senhas não coincidem.");
-      setSubmitting(false);
-      return;
-    }
+    const cpfRaw = String(fd.get("cpf") || "");
+    const password = cpfRaw.replace(/\D/g, "");
 
     const payload = {
+      event_id: eventId,
       full_name: String(fd.get("full_name") || ""),
       cpf: String(fd.get("cpf") || ""),
       birth_date: String(fd.get("birth_date") || "") || null,
@@ -84,7 +77,7 @@ export default function InscreverPage() {
       });
 
       router.push(
-        `/confirmacao?id=${encodeURIComponent(regId)}&status=registered`
+        `/evento/${eventId}/confirmacao?id=${encodeURIComponent(regId)}&status=registered`
       );
     } catch (err) {
       setFormError(err instanceof Error ? err.message : "Erro ao inscrever");
@@ -96,7 +89,7 @@ export default function InscreverPage() {
     <div className="min-h-full flex flex-col bg-background">
       <SiteHeader solid />
       <main className="mx-auto w-full max-w-lg flex-1 px-4 py-8 pb-16">
-        <Link href="/" className="text-sm text-muted hover:text-foreground">
+        <Link href={`/evento/${eventId}`} className="text-sm text-muted hover:text-foreground">
           ← Voltar ao evento
         </Link>
         <h1 className="mt-3 text-2xl font-black tracking-tight">Inscrição</h1>
@@ -187,30 +180,7 @@ export default function InscreverPage() {
                   </select>
                 </div>
 
-                <div className="rounded-2xl border border-border bg-card-2/40 p-4 space-y-3">
-                  <p className="text-sm font-bold">Acesso (Meu ingresso)</p>
-                  <p className="text-xs text-muted">
-                    Defina uma senha. Com <strong>CPF + senha</strong> você consulta o
-                    status e paga em <strong>Comprar</strong>. Quem não se inscreveu
-                    não consegue entrar.
-                  </p>
-                  <Field
-                    label="Senha de acesso"
-                    name="access_password"
-                    type="password"
-                    required
-                    placeholder="Mínimo 4 caracteres"
-                    autoComplete="new-password"
-                  />
-                  <Field
-                    label="Confirmar senha"
-                    name="access_password2"
-                    type="password"
-                    required
-                    placeholder="Repita a senha"
-                    autoComplete="new-password"
-                  />
-                </div>
+
 
                 {formError && (
                   <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm">
@@ -228,11 +198,11 @@ export default function InscreverPage() {
 
                 <p className="text-center text-xs text-muted">
                   Já se inscreveu?{" "}
-                  <Link href="/atleta" className="text-brand-soft underline">
+                  <Link href={`/evento/${eventId}/atleta`} className="text-brand-soft underline">
                     Meu ingresso
                   </Link>
                   {" · "}
-                  <Link href="/comprar" className="text-brand-soft underline">
+                  <Link href={`/evento/${eventId}/comprar`} className="text-brand-soft underline">
                     Comprar / pagar
                   </Link>
                 </p>

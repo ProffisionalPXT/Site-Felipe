@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { checkAdminPassword } from "@/lib/admin-auth";
 import { DEMO_REGISTRATIONS, getDemoEvent, isDemoMode } from "@/lib/demo-data";
-import { getActiveEvent } from "@/lib/event";
+import { getActiveEvent, getEventById } from "@/lib/event";
 import {
   computeStats,
   filterRegistrations,
@@ -27,6 +27,7 @@ export async function GET(req: NextRequest) {
   const status = sp.get("status")?.trim() || "all";
   const category = sp.get("category")?.trim() || "all";
   const shirt = sp.get("shirt")?.trim() || "all";
+  const eventId = sp.get("eventId")?.trim();
 
   if (isDemoMode()) {
     const all = [...DEMO_REGISTRATIONS];
@@ -46,7 +47,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const event = await getActiveEvent();
+    const event = eventId ? await getEventById(eventId) : await getActiveEvent();
     if (!event) {
       return NextResponse.json({ error: "Evento não encontrado." }, { status: 404 });
     }

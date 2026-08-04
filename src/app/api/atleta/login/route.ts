@@ -6,12 +6,13 @@ import {
   verifyAthletePassword,
 } from "@/lib/athlete-auth";
 import { DEMO_REGISTRATIONS, getDemoEvent, isDemoMode } from "@/lib/demo-data";
-import { getActiveEvent, isValidCpf, onlyDigits } from "@/lib/event";
+import { getActiveEvent, getEventById, isValidCpf, onlyDigits } from "@/lib/event";
 import { formatBRL } from "@/lib/format";
 import { getServiceSupabase, isSupabaseConfigured } from "@/lib/supabase";
 import type { RegistrationRow } from "@/lib/types";
 
 const bodySchema = z.object({
+  event_id: z.string().uuid().optional(),
   cpf: z.string().min(11).max(14),
   password: z.string().min(4).max(72),
 });
@@ -75,6 +76,7 @@ export async function POST(req: NextRequest) {
 
   const cpf = onlyDigits(parsed.data.cpf);
   const password = parsed.data.password;
+  const eventId = parsed.data.event_id;
 
   if (cpf.length !== 11) {
     return NextResponse.json({ error: "CPF inválido." }, { status: 400 });
@@ -126,9 +128,9 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const event = await getActiveEvent();
+    const event = eventId ? await getEventById(eventId) : await getActiveEvent();
     if (!event) {
-      return NextResponse.json({ error: "Nenhum evento ativo." }, { status: 404 });
+      return NextResponse.json({ error: "Evento não encontrado ou inativo." }, { status: 404 });
     }
 
     const supabase = getServiceSupabase();

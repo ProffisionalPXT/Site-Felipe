@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { MercadoPagoConfig, Payment } from "mercadopago";
 import { getServiceSupabase, isSupabaseConfigured } from "@/lib/supabase";
-
+import { getMercadoPagoAccessToken } from "@/lib/payment-settings";
 /**
  * Webhook Mercado Pago — marca inscrição como paga quando o pagamento é approved.
  * Configure a URL: https://SEU_SITE/api/webhook/mercadopago
@@ -11,7 +11,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false }, { status: 503 });
   }
 
-  const token = process.env.MERCADOPAGO_ACCESS_TOKEN;
+  const eventId = req.nextUrl.searchParams.get("eventId") || undefined;
+  const token = await getMercadoPagoAccessToken(eventId);
+  
   if (!token) {
     return NextResponse.json({ ok: false, error: "no token" }, { status: 503 });
   }

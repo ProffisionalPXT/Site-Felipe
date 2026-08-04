@@ -39,6 +39,7 @@ function normalizeEvent(row: Record<string, unknown>): EventRow {
 }
 
 export async function getActiveEvent(): Promise<EventPublic | null> {
+  // TODO: Deprecate this. API routes should receive eventId and call getEventById.
   const supabase = getServiceSupabase();
   const eventId = process.env.EVENT_ID;
 
@@ -55,7 +56,65 @@ export async function getActiveEvent(): Promise<EventPublic | null> {
   const raw = events?.[0] as Record<string, unknown> | undefined;
   if (!raw) return null;
 
-  const event = normalizeEvent(raw);
+  return getEventById(String(raw.id));
+}
+
+export async function getAllEvents(): Promise<EventPublic[]> {
+  const supabase = getServiceSupabase();
+  const { data: events, error } = await supabase
+    .from("events")
+    .select("*")
+    .order("created_at", { ascending: true });
+
+  if (error) throw error;
+  if (!events || events.length === 0) return [];
+
+  // Convert raw rows
+  const normalized = (events as Record<string, unknown>[]).map(normalizeEvent);
+
+  // For lists, we might not need to load all images/stats for every event to save queries,
+  // but for now, we will do it sequentially or just return the basic info.
+  // Actually, let's load stats for all of them so the vitrine can show "Vagas Esgotadas".
+  
+  const results: EventPublic[] = [];
+  for (const ev of normalized) {
+    // Optimization: we could do a single query grouping by event_id, but for < 10 events, this is fine.
+    const [{ count: paidCount }, { count: pendingCount }] = await Promise.all([
+      supabase.from("registrations").select("*", { count: "exact", head: true }).eq("event_id", ev.id).eq("status", "paid"),
+      supabase.from("registrations").select("*", { count: "exact", head: true }).eq("event_id", ev.id).eq("status", "pending")
+    ]);
+    const occupied = (paidCount ?? 0) + (pendingCount ?? 0);
+    const slots_remaining = Math.max(0, ev.max_slots - occupied);
+    
+    // Get cover image
+    const { data: images } = await supabase.from("event_images").select("*").eq("event_id", ev.id).order("sort_order", { ascending: true });
+    const imgs = (images ?? []) as EventImage[];
+    let cover = ev.cover_image_url;
+    if (!cover) {
+      const coverImg = imgs.find((i) => i.is_cover) ?? imgs[0];
+      cover = coverImg?.url ?? null;
+    }
+
+    results.push({
+      ...ev,
+      cover_image_url: cover,
+      slots_remaining,
+      paid_count: paidCount ?? 0,
+      pending_count: pendingCount ?? 0,
+      images: imgs,
+    });
+  }
+  
+  return results;
+}
+
+export async function getEventById(id: string): Promise<EventPublic | null> {
+  const supabase = getServiceSupabase();
+  const { data, error } = await supabase.from("events").select("*").eq("id", id).single();
+  
+  if (error || !data) return null;
+  
+  const event = normalizeEvent(data as Record<string, unknown>);
 
   const [{ count: paidCount }, { count: pendingCount }, imagesRes] =
     await Promise.all([
@@ -83,7 +142,6 @@ export async function getActiveEvent(): Promise<EventPublic | null> {
   const occupied = (paidCount ?? 0) + (pendingCount ?? 0);
   const slots_remaining = Math.max(0, event.max_slots - occupied);
 
-  // Capa: cover_image_url do evento ou primeira marcada is_cover ou primeira foto
   let cover = event.cover_image_url;
   if (!cover) {
     const coverImg = images.find((i) => i.is_cover) ?? images[0];

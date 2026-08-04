@@ -1,15 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { SiteHeader } from "@/components/SiteHeader";
 
 function Content() {
-  const params = useSearchParams();
-  const id = params.get("id");
-  const status = params.get("status") || "pending";
-  const method = params.get("method");
+  const searchParams = useSearchParams();
+  const params = useParams();
+  const eventId = params?.id as string;
+  const id = searchParams.get("id");
+  const status = searchParams.get("status") || "pending";
+  const method = searchParams.get("method");
 
   const methodLabel =
     method === "pix" ? "Pix" : method === "card" ? "Cartão de crédito" : null;
@@ -55,24 +57,23 @@ function Content() {
       )}
       <div className="flex flex-col sm:flex-row gap-2 justify-center flex-wrap">
         {(isRegistered || status === "pending" || status === "failure") && (
-          <Link
-            href="/comprar"
-            className="inline-flex justify-center rounded-full bg-brand px-6 py-2.5 text-sm font-bold text-white hover:bg-brand-dark"
-          >
-            Comprar / pagar
-          </Link>
+          <>
+            <Link
+              href={`/evento/${eventId}/atleta`}
+              className="flex-1 rounded-xl bg-brand py-3.5 text-center font-bold text-white hover:bg-brand-dark transition"
+            >
+              Meu ingresso (apenas CPF)
+            </Link>
+            <Link
+              href={`/evento/${eventId}/comprar`}
+              className="flex-1 rounded-xl border border-border bg-card-2 py-3.5 text-center font-bold hover:bg-card-2/80 transition"
+            >
+              Comprar / pagar
+            </Link>
+          </>
         )}
-        <Link
-          href="/atleta"
-          className="inline-flex justify-center rounded-full border border-border px-6 py-2.5 text-sm font-semibold hover:bg-white/5"
-        >
-          Meu ingresso (CPF + senha)
-        </Link>
-        <Link
-          href="/"
-          className="inline-flex justify-center rounded-full border border-border px-6 py-2.5 text-sm font-semibold hover:bg-white/5"
-        >
-          Voltar ao evento
+        <Link href={`/evento/${eventId}`} className="text-sm text-muted hover:text-foreground">
+          ← Voltar ao evento
         </Link>
       </div>
     </div>

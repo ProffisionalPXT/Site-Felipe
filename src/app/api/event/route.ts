@@ -2,18 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { checkAdminPassword } from "@/lib/admin-auth";
 import { getDemoEvent, isDemoMode, setDemoEvent } from "@/lib/demo-data";
-import { getActiveEvent } from "@/lib/event";
+import { getActiveEvent, getEventById } from "@/lib/event";
 import { getPaymentSettingsPublic } from "@/lib/payment-settings";
 import { getServiceSupabase, isSupabaseConfigured } from "@/lib/supabase";
 import { resolveColor, resolveFont, resolveLayout } from "@/lib/themes";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   if (isDemoMode()) {
     const payment = await getPaymentSettingsPublic();
     return NextResponse.json({
       configured: true,
       demo: true,
       event: getDemoEvent(),
+      events: [getDemoEvent()],
       payment,
     });
   }
@@ -30,18 +31,22 @@ export async function GET() {
   }
 
   try {
-    const event = await getActiveEvent();
-    if (!event) {
-      return NextResponse.json(
-        {
-          configured: true,
-          error: "Nenhum evento cadastrado. Rode o schema.sql no Supabase.",
-        },
-        { status: 404 }
-      );
+    const id = req.nextUrl.searchParams.get("id");
+    if (id) {
+      const event = await getEventById(id);
+      if (!event) {
+        return NextResponse.json(
+          { configured: true, error: "Evento nÃ£o encontrado." },
+          { status: 404 }
+        );
+      }
+      const payment = await getPaymentSettingsPublic(id);
+      return NextResponse.json({ configured: true, demo: false, event, payment });
+    } else {
+      const { getAllEvents } = await import("@/lib/event");
+      const events = await getAllEvents();
+      return NextResponse.json({ configured: true, demo: false, events });
     }
-    const payment = await getPaymentSettingsPublic();
-    return NextResponse.json({ configured: true, demo: false, event, payment });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Erro ao buscar evento";
     return NextResponse.json({ configured: true, error: message }, { status: 500 });
@@ -49,6 +54,7 @@ export async function GET() {
 }
 
 const updateSchema = z.object({
+  id: z.string().uuid().optional(),
   name: z.string().min(2).max(160),
   description: z.string().max(8000).optional().default(""),
   regulations: z.string().max(12000).optional().default(""),
@@ -187,7 +193,8 @@ export async function PUT(req: NextRequest) {
   }
 
   try {
-    const current = await getActiveEvent();
+    const eventId = body.id;
+    const current = eventId ? await getEventById(eventId) : await getActiveEvent();
     if (!current) {
       return NextResponse.json({ error: "Evento nÃ£o encontrado." }, { status: 404 });
     }
@@ -224,10 +231,53 @@ export async function PUT(req: NextRequest) {
 
     if (error) throw error;
 
-    const event = await getActiveEvent();
+    const event = await getEventById(current.id);
     return NextResponse.json({ ok: true, demo: false, event, raw: data });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Erro ao salvar evento";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+
+export async function POST(req: NextRequest) {
+  const password = req.headers.get("x-admin-password");
+  if (!checkAdminPassword(password)) {
+    return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
+  }
+
+  if (isDemoMode()) {
+    return NextResponse.json({ error: "Criação de novos eventos não permitida no modo demonstração." }, { status: 403 });
+  }
+
+  if (!isSupabaseConfigured()) {
+    return NextResponse.json({ error: "Supabase não configurado." }, { status: 503 });
+  }
+
+  try {
+    const supabase = getServiceSupabase();
+    
+    // Insere um evento vazio com dados default
+    const { data, error } = await supabase
+      .from("events")
+      .insert({
+        name: "Novo Evento",
+        event_date: new Date().toISOString().split("T")[0], // Hoje
+        price_cents: 0,
+        max_slots: 500,
+        registration_open: false,
+        categories: ["5K", "10K"],
+        shirt_sizes: ["P", "M", "G"],
+      })
+      .select("*")
+      .single();
+
+    if (error) throw error;
+    
+    // Retorna o novo evento para o frontend poder redirecionar e editar
+    return NextResponse.json({ ok: true, event: data });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Erro ao criar evento";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+

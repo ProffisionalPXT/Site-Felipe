@@ -5,10 +5,11 @@ import {
   isValidAthletePassword,
 } from "@/lib/athlete-auth";
 import { isDemoMode } from "@/lib/demo-data";
-import { getActiveEvent, isValidCpf, onlyDigits } from "@/lib/event";
+import { getActiveEvent, getEventById, isValidCpf, onlyDigits } from "@/lib/event";
 import { getServiceSupabase, isSupabaseConfigured } from "@/lib/supabase";
 
 const bodySchema = z.object({
+  event_id: z.string().uuid().optional(),
   full_name: z.string().min(3).max(120),
   cpf: z.string().min(11).max(14),
   birth_date: z.string().optional().nullable(),
@@ -86,7 +87,7 @@ export async function POST(req: NextRequest) {
         price_cents: ev.price_cents,
       },
       message:
-        "Inscrição registrada. Use CPF + senha em Meu ingresso e depois Comprar para pagar.",
+        "Inscrição registrada. Use seu CPF em Meu ingresso e depois Comprar para pagar.",
     });
   }
 
@@ -102,11 +103,14 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const event = await getActiveEvent();
+    const eventId = data.event_id;
+    const event = eventId ? await getEventById(eventId) : await getActiveEvent();
     if (!event) {
-      return NextResponse.json({ error: "Evento não encontrado." }, { status: 404 });
-    }
-    if (!event.registration_open) {
+      return NextResponse.json(
+        { error: "Nenhum evento configurado ou encontrado." },
+        { status: 400 }
+      );
+    }if (!event.registration_open) {
       return NextResponse.json({ error: "Inscrições fechadas." }, { status: 403 });
     }
     if (event.slots_remaining <= 0) {
@@ -133,7 +137,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           error:
-            "Já existe inscrição com este CPF. Entre em Meu ingresso com CPF e senha, ou use Comprar para pagar.",
+          "Já existe inscrição com este CPF. Entre em Meu ingresso com seu CPF, ou use Comprar para pagar.",
         },
         { status: 409 }
       );
@@ -201,7 +205,7 @@ export async function POST(req: NextRequest) {
         price_cents: event.price_cents,
       },
       message:
-        "Inscrição registrada. Entre em Meu ingresso (CPF + senha) e use Comprar para pagar.",
+        "Inscrição registrada. Entre em Meu ingresso (apenas CPF) e use Comprar para pagar.",
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Erro ao inscrever";

@@ -1,5 +1,6 @@
 "use client";
 
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { SiteHeader } from "@/components/SiteHeader";
@@ -35,6 +36,8 @@ type AthleteReg = {
 type Session = { cpf: string; password: string };
 
 export default function AtletaPage() {
+  const params = useParams();
+  const eventId = params?.id as string;
   const [session, setSession] = useState<Session | null>(null);
   const [regs, setRegs] = useState<AthleteReg[] | null>(null);
   const [cpfMasked, setCpfMasked] = useState("");
@@ -50,7 +53,7 @@ export default function AtletaPage() {
       const res = await fetch("/api/atleta/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cpf, password }),
+        body: JSON.stringify({ event_id: eventId, cpf, password }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Falha no acesso");
@@ -86,7 +89,9 @@ export default function AtletaPage() {
   function onLogin(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
-    void doLogin(String(fd.get("cpf") || ""), String(fd.get("password") || ""));
+    const cpf = String(fd.get("cpf") || "");
+    const password = cpf.replace(/\D/g, "");
+    void doLogin(cpf, password);
   }
 
   function logout() {
@@ -104,15 +109,14 @@ export default function AtletaPage() {
     <div className="min-h-full flex flex-col bg-background text-foreground">
       <SiteHeader solid />
       <main className="mx-auto w-full max-w-lg flex-1 px-4 py-8 pb-16">
-        <Link href="/" className="text-sm text-muted hover:text-foreground">
+        <Link href={`/evento/${eventId}`} className="text-sm text-muted hover:text-foreground">
           ← Voltar ao evento
         </Link>
         <h1 className="mt-3 text-2xl font-black tracking-tight">
           Meu ingresso
         </h1>
         <p className="text-sm text-muted mt-1 leading-relaxed">
-          Login com CPF + senha (só quem se inscreveu). A sessão fica ativa{" "}
-          <strong className="text-foreground">6 horas</strong> neste navegador.
+          Para ver seu ingresso, informe o seu <strong>CPF</strong>.
         </p>
 
         {loading && <p className="mt-8 text-muted">Carregando…</p>}
@@ -132,16 +136,7 @@ export default function AtletaPage() {
                 className="mt-1.5 w-full rounded-xl border border-border bg-card-2 px-3 py-3 outline-none focus:ring-2 focus:ring-brand/40"
               />
             </label>
-            <label className="block">
-              <span className="text-sm font-medium">Senha de acesso</span>
-              <input
-                name="password"
-                type="password"
-                required
-                minLength={4}
-                className="mt-1.5 w-full rounded-xl border border-border bg-card-2 px-3 py-3 outline-none focus:ring-2 focus:ring-brand/40"
-              />
-            </label>
+
             {error && (
               <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">
                 {error}
@@ -156,7 +151,7 @@ export default function AtletaPage() {
             </button>
             <p className="text-center text-xs text-muted">
               Ainda não tem inscrição?{" "}
-              <Link href="/inscrever" className="text-brand-soft underline">
+              <Link href={`/evento/${eventId}/inscrever`} className="text-brand-soft underline">
                 Fazer inscrição
               </Link>
             </p>
@@ -189,7 +184,7 @@ export default function AtletaPage() {
             {regs.length === 0 && (
               <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-5 text-sm">
                 Nenhuma inscrição.{" "}
-                <Link href="/inscrever" className="underline text-brand-soft">
+                <Link href={`/evento/${eventId}/inscrever`} className="underline text-brand-soft">
                   Inscrever-se
                 </Link>
               </div>
@@ -230,7 +225,7 @@ export default function AtletaPage() {
                   {selected.can_pay !== false &&
                     selected.status === "pending" && (
                       <Link
-                        href="/comprar"
+                        href={`/evento/${eventId}/comprar`}
                         className="flex-1 inline-flex justify-center rounded-xl bg-brand py-3 font-bold text-white"
                       >
                         Comprar / pagar
@@ -255,7 +250,7 @@ export default function AtletaPage() {
                 <div className="flex flex-col sm:flex-row gap-2 print:hidden">
                   {regs[0].status === "pending" && (
                     <Link
-                      href="/comprar"
+                      href={`/evento/${eventId}/comprar`}
                       className="flex-1 inline-flex justify-center rounded-xl bg-brand py-3 font-bold text-white"
                     >
                       Comprar / pagar

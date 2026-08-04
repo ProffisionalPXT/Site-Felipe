@@ -3,7 +3,7 @@ import { z } from "zod";
 import {
   verifyAthletePassword,
 } from "@/lib/athlete-auth";
-import { getActiveEvent, isValidCpf, onlyDigits } from "@/lib/event";
+import { getActiveEvent, getEventById, isValidCpf, onlyDigits } from "@/lib/event";
 import { getServiceSupabase, isSupabaseConfigured } from "@/lib/supabase";
 import { isDemoMode, getDemoEvent } from "@/lib/demo-data";
 
@@ -60,7 +60,18 @@ export async function PATCH(
   }
 
   try {
-    const event = await getActiveEvent();
+    const supabase = getServiceSupabase();
+    const { data: reg, error } = await supabase
+      .from("registrations")
+      .select("id, event_id, cpf, status, access_password_hash, amount_cents")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (error || !reg) {
+      return NextResponse.json({ error: "Inscrição não encontrada." }, { status: 404 });
+    }
+
+    const event = await getEventById(reg.event_id);
     if (!event) {
       return NextResponse.json({ error: "Evento não encontrado." }, { status: 404 });
     }
@@ -71,17 +82,6 @@ export async function PATCH(
       return NextResponse.json({ error: "Tamanho inválido." }, { status: 400 });
     }
 
-    const supabase = getServiceSupabase();
-    const { data: reg, error } = await supabase
-      .from("registrations")
-      .select("id, cpf, status, access_password_hash, amount_cents")
-      .eq("id", id)
-      .eq("event_id", event.id)
-      .maybeSingle();
-
-    if (error || !reg) {
-      return NextResponse.json({ error: "Inscrição não encontrada." }, { status: 404 });
-    }
     if (onlyDigits(String(reg.cpf)) !== cpf) {
       return NextResponse.json({ error: "Acesso negado." }, { status: 403 });
     }

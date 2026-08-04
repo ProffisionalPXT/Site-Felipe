@@ -1,5 +1,5 @@
 import { getDemoEvent, isDemoMode, setDemoEvent } from "./demo-data";
-import { getActiveEvent } from "./event";
+import { getActiveEvent, getEventById } from "./event";
 import { getServiceSupabase, isSupabaseConfigured } from "./supabase";
 
 export type PaymentMode = "mercadopago" | "manual_pix" | "demo";
@@ -101,7 +101,7 @@ function rowToSettings(row: Record<string, unknown>): PaymentSettings {
 }
 
 /** Settings para o admin (token mascarado na resposta se não for o valor novo). */
-export async function getPaymentSettingsForAdmin(): Promise<PaymentSettings> {
+export async function getPaymentSettingsForAdmin(eventId?: string): Promise<PaymentSettings> {
   if (isDemoMode()) {
     return {
       ...demoPayment,
@@ -118,7 +118,7 @@ export async function getPaymentSettingsForAdmin(): Promise<PaymentSettings> {
     return { ...DEFAULTS };
   }
 
-  const event = await getActiveEvent();
+  const event = eventId ? await getEventById(eventId) : await getActiveEvent();
   if (!event) return { ...DEFAULTS };
 
   const supabase = getServiceSupabase();
@@ -143,7 +143,7 @@ export async function getPaymentSettingsForAdmin(): Promise<PaymentSettings> {
 }
 
 /** Token real para processar pagamento (servidor). */
-export async function getMercadoPagoAccessToken(): Promise<string | null> {
+export async function getMercadoPagoAccessToken(eventId?: string): Promise<string | null> {
   // Prioridade: cadastro do organizador > env
   if (isDemoMode()) {
     return demoPayment.mp_access_token || process.env.MERCADOPAGO_ACCESS_TOKEN || null;
@@ -151,7 +151,7 @@ export async function getMercadoPagoAccessToken(): Promise<string | null> {
 
   if (isSupabaseConfigured()) {
     try {
-      const event = await getActiveEvent();
+      const event = eventId ? await getEventById(eventId) : await getActiveEvent();
       if (event) {
         const supabase = getServiceSupabase();
         const { data } = await supabase
@@ -170,7 +170,7 @@ export async function getMercadoPagoAccessToken(): Promise<string | null> {
   return process.env.MERCADOPAGO_ACCESS_TOKEN || null;
 }
 
-export async function getPaymentSettingsPublic(): Promise<PaymentSettingsPublic> {
+export async function getPaymentSettingsPublic(eventId?: string): Promise<PaymentSettingsPublic> {
   if (isDemoMode()) {
     return {
       mode: "demo",
@@ -182,14 +182,14 @@ export async function getPaymentSettingsPublic(): Promise<PaymentSettingsPublic>
     };
   }
 
-  const admin = await getPaymentSettingsForAdmin();
+  const admin = await getPaymentSettingsForAdmin(eventId);
   // reload with token flag - getPaymentSettingsForAdmin strips token
   let hasMp = admin.mp_token_configured;
   let pixKey = admin.pix_key;
   let cardFee = admin.card_fee_percent;
   if (isSupabaseConfigured()) {
     try {
-      const event = await getActiveEvent();
+      const event = eventId ? await getEventById(eventId) : await getActiveEvent();
       if (event) {
         const supabase = getServiceSupabase();
         const { data } = await supabase
@@ -247,7 +247,8 @@ export type PaymentSettingsUpdate = {
 };
 
 export async function savePaymentSettings(
-  input: PaymentSettingsUpdate
+  input: PaymentSettingsUpdate,
+  eventId?: string
 ): Promise<PaymentSettings> {
   if (isDemoMode()) {
     const nextToken = input.clear_mp_token
@@ -285,7 +286,7 @@ export async function savePaymentSettings(
     throw new Error("Supabase não configurado.");
   }
 
-  const event = await getActiveEvent();
+  const event = eventId ? await getEventById(eventId) : await getActiveEvent();
   if (!event) throw new Error("Evento não encontrado.");
 
   const supabase = getServiceSupabase();
@@ -330,5 +331,5 @@ export async function savePaymentSettings(
     );
   }
 
-  return getPaymentSettingsForAdmin();
+  return getPaymentSettingsForAdmin(eventId);
 }

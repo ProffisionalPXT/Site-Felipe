@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { FormEvent, useCallback, useEffect, useState, Suspense } from "react";
 import { SiteHeader } from "@/components/SiteHeader";
 import {
   ATHLETE_SESSION_KEY,
@@ -33,13 +33,18 @@ type AthleteReg = {
 
 type AthleteSession = { cpf: string; password: string; exp?: number };
 
-/**
- * Comprar ingresso:
- * - Logado (6h): só modalidade, camisa e pagamento
- * - Não logado: formulário completo + pagamento
- */
-export default function ComprarPage() {
+export default function ComprarPageWrapper() {
+  return (
+    <Suspense>
+      <ComprarContent />
+    </Suspense>
+  );
+}
+
+function ComprarContent() {
   const router = useRouter();
+  const params = useParams();
+  const eventId = params?.id as string;
   const [event, setEvent] = useState<EventPublic | null>(null);
   const [session, setSession] = useState<AthleteSession | null>(null);
   const [regs, setRegs] = useState<AthleteReg[]>([]);
@@ -59,7 +64,7 @@ export default function ComprarPage() {
     const res = await fetch("/api/atleta/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ cpf, password }),
+      body: JSON.stringify({ event_id: eventId, cpf, password }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Falha no acesso");
@@ -75,10 +80,11 @@ export default function ComprarPage() {
     setSession(sess);
     saveTimedSession(ATHLETE_SESSION_KEY, sess);
     return list;
-  }, []);
+  }, [eventId]);
 
   useEffect(() => {
-    fetch("/api/event")
+    if (!eventId) return;
+    fetch(`/api/event?id=${eventId}`)
       .then((r) => r.json())
       .then((d) => {
         if (d.event) {
@@ -114,7 +120,7 @@ export default function ComprarPage() {
         }
         setLoading(false);
       });
-  }, [loginWith]);
+  }, [eventId, loginWith]);
 
   function logout() {
     setSession(null);
@@ -155,11 +161,10 @@ export default function ComprarPage() {
     }
 
     router.push(
-      `/confirmacao?id=${registrationId}&status=pending&method=${payMethod}`
+      `/evento/${eventId}/confirmacao?id=${registrationId}&status=pending&method=${payMethod}`
     );
   }
 
-  /** Logado: atualiza opções e paga */
   async function startPayLogged() {
     if (!selected?.can_pay || !session) return;
     setPaying(true);
@@ -185,28 +190,17 @@ export default function ComprarPage() {
     }
   }
 
-  /** Não logado: cria inscrição completa e vai ao pagamento */
   async function onGuestSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!event) return;
     setPayError(null);
     setGuestSubmitting(true);
-
     const fd = new FormData(e.currentTarget);
-    const password = String(fd.get("access_password") || "");
-    const password2 = String(fd.get("access_password2") || "");
-    if (password.length < 4) {
-      setPayError("Senha de acesso: mínimo 4 caracteres.");
-      setGuestSubmitting(false);
-      return;
-    }
-    if (password !== password2) {
-      setPayError("As senhas não coincidem.");
-      setGuestSubmitting(false);
-      return;
-    }
 
+    const cpfRaw = String(fd.get("cpf") || "");
+    const password = cpfRaw.replace(/\D/g, "");
     const payload = {
+      event_id: eventId,
       full_name: String(fd.get("full_name") || ""),
       cpf: String(fd.get("cpf") || ""),
       birth_date: String(fd.get("birth_date") || "") || null,
@@ -245,7 +239,7 @@ export default function ComprarPage() {
     <div className="min-h-full flex flex-col bg-background">
       <SiteHeader solid />
       <main className="mx-auto w-full max-w-lg flex-1 px-4 py-8 pb-16">
-        <Link href="/" className="text-sm text-muted hover:text-foreground">
+        <Link href={`/evento/${eventId}`} className="text-sm text-muted hover:text-foreground">
           ← Voltar ao evento
         </Link>
         <h1 className="mt-3 text-2xl font-black tracking-tight">
@@ -259,7 +253,6 @@ export default function ComprarPage() {
 
         {loading && <p className="mt-8 text-muted">Carregando…</p>}
 
-        {/* —— LOGADO: só categoria, camisa, pagamento —— */}
         {!loading && session && event && (
           <div className="mt-6 space-y-4">
             <div className="flex items-center justify-between gap-2 text-sm">
@@ -283,11 +276,7 @@ export default function ComprarPage() {
 
             {regs.length === 0 && (
               <p className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm">
-                Nenhuma inscrição. Use o formulário completo abaixo após sair, ou{" "}
-                <Link href="/inscrever" className="underline text-brand-soft">
-                  Inscrição
-                </Link>
-                .
+                Nenhuma inscrição. Use o formulário completo abaixo após sair.
               </p>
             )}
 
@@ -321,7 +310,7 @@ export default function ComprarPage() {
                 <p className="font-bold text-emerald-400">
                   {selected.has_receipt ? "Já está pago" : selected.status_label}
                 </p>
-                <Link href="/atleta" className="text-sm text-brand-soft underline">
+                <Link href={`/evento/${eventId}/atleta`} className="text-sm text-brand-soft underline">
                   Ver em Meu ingresso
                 </Link>
               </div>
@@ -350,7 +339,6 @@ export default function ComprarPage() {
           </div>
         )}
 
-        {/* —— NÃO LOGADO: formulário completo + pagamento —— */}
         {!loading && !session && event && (
           <form
             onSubmit={onGuestSubmit}
@@ -410,26 +398,6 @@ export default function ComprarPage() {
               </select>
             </div>
 
-            <div className="rounded-xl border border-border bg-card-2/40 p-3 space-y-3">
-              <p className="text-xs text-muted">
-                Crie uma senha para entrar depois em Meu ingresso (válida 6h por
-                sessão no navegador).
-              </p>
-              <Field
-                label="Senha de acesso"
-                name="access_password"
-                type="password"
-                required
-                placeholder="Mín. 4 caracteres"
-              />
-              <Field
-                label="Confirmar senha"
-                name="access_password2"
-                type="password"
-                required
-              />
-            </div>
-
             <PayMethodOnly
               payMethod={payMethod}
               setPayMethod={setPayMethod}
@@ -462,7 +430,7 @@ export default function ComprarPage() {
 
             <p className="text-center text-xs text-muted">
               Já tem inscrição?{" "}
-              <Link href="/atleta" className="text-brand-soft underline">
+              <Link href={`/evento/${eventId}/atleta`} className="text-brand-soft underline">
                 Meu ingresso (login)
               </Link>
             </p>

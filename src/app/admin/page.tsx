@@ -59,6 +59,9 @@ export default function AdminPage() {
   const [password, setPassword] = useState("");
   const [authed, setAuthed] = useState(false);
   const [tab, setTab] = useState<Tab>("resumo");
+  const [isEditingEvent, setIsEditingEvent] = useState(false);
+  const [events, setEvents] = useState<EventPublic[]>([]);
+  const [selectedEventId, setSelectedEventId] = useState<string>("");
   const [event, setEvent] = useState<EventPublic | null>(null);
   const [rows, setRows] = useState<RegistrationRow[]>([]);
   const [stats, setStats] = useState<RegistrationStats | null>(null);
@@ -225,23 +228,36 @@ export default function AdminPage() {
         if (st && st !== "all") params.set("status", st);
         if (cat && cat !== "all") params.set("category", cat);
         if (sh && sh !== "all") params.set("shirt", sh);
+        
+        let targetEventId = selectedEventId;
+        const evListRes = await fetch("/api/event");
+        const evListData = await evListRes.json();
+        const availableEvents = evListData.events || [];
+        setEvents(availableEvents);
+        
+        if (!targetEventId && availableEvents.length > 0) {
+          targetEventId = availableEvents[0].id;
+          setSelectedEventId(targetEventId);
+        }
+        if (targetEventId) {
+          params.set("eventId", targetEventId);
+        }
+
         const qs = params.toString();
         const listUrl = qs
           ? `/api/inscricoes/list?${qs}`
           : "/api/inscricoes/list";
 
-        const [evRes, listRes] = await Promise.all([
-          fetch("/api/event"),
+        const [listRes] = await Promise.all([
           fetch(listUrl, { headers: { "x-admin-password": pwd } }),
         ]);
-
-        const evData = await evRes.json();
-        if (!evRes.ok) throw new Error(evData.error || "Erro ao carregar evento");
 
         const listData = await listRes.json();
         if (!listRes.ok) throw new Error(listData.error || "Senha incorreta");
 
-        fillForm(listData.event || evData.event);
+        if (listData.event) {
+          fillForm(listData.event);
+        }
         setRows(listData.registrations || []);
         setStats(listData.stats || null);
         setStatsFiltered(listData.stats_filtered || null);
@@ -256,7 +272,7 @@ export default function AdminPage() {
         setLoading(false);
       }
     },
-    [q, filterStatus, filterCategory, filterShirt]
+    [q, filterStatus, filterCategory, filterShirt, selectedEventId]
   );
 
   // Poll silencioso (sem filtros) para detectar pagamentos / novas inscrições
@@ -267,7 +283,9 @@ export default function AdminPage() {
       const pwd = pollPwd.current;
       if (!pwd) return;
       try {
-        const res = await fetch("/api/inscricoes/list", {
+        const params = new URLSearchParams();
+        if (selectedEventId) params.set("eventId", selectedEventId);
+        const res = await fetch(`/api/inscricoes/list?${params.toString()}`, {
           headers: { "x-admin-password": pwd },
         });
         if (!res.ok) return;
@@ -342,8 +360,36 @@ export default function AdminPage() {
     return () => window.clearInterval(t);
   }, [authed, password, loadAll]);
 
+  async function createEvent() {
+    if (!password) return;
+    setSaving(true);
+    try {
+      const res = await fetch("/api/event", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-password": password,
+        },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Erro ao criar evento");
+      
+      const newEvent = data.event;
+      setEvents((prev) => [...prev, newEvent]);
+      setSelectedEventId(newEvent.id);
+      setIsEditingEvent(true);
+      fillForm(newEvent);
+      
+      showSuccess("Novo evento criado!", "Preencha os dados e salve.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erro ao criar");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function saveEvent(
-    e?: FormEvent,
+    e?: FormEvent<HTMLFormElement>,
     contactsOverride?: ContactForm
   ) {
     e?.preventDefault();
@@ -383,6 +429,7 @@ export default function AdminPage() {
           "x-admin-password": password,
         },
         body: JSON.stringify({
+          id: selectedEventId || event?.id,
           name: name.trim() || "Corrida",
           description,
           regulations,
@@ -529,10 +576,10 @@ export default function AdminPage() {
   }
 
 
-  const NAV: { id: Tab; label: string; icon: string }[] = [
-    { id: "resumo", label: "Resumo", icon: "⌂" },
-    { id: "evento", label: "Dados", icon: "☰" },
-    { id: "visual", label: "Layout", icon: "▦" },
+  const NAV = [
+  { id: "resumo", label: "Resumo", icon: "📊" },
+  { id: "evento", label: "Eventos", icon: "≡" },
+  { id: "visual", label: "Layout", icon: "✨" },
     { id: "contatos", label: "Contatos", icon: "✉" },
     { id: "fotos", label: "Fotos", icon: "▣" },
     { id: "recebimento", label: "Recebimento", icon: "₴" },
@@ -607,12 +654,7 @@ export default function AdminPage() {
             className="w-full max-w-sm space-y-3 rounded-2xl admin-glass p-6 md:p-8"
             onSubmit={(e) => {
               e.preventDefault();
-              loadAll(password, {
-                q: "",
-                status: "all",
-                category: "all",
-                shirt: "all",
-              });
+              loadAll(password);
             }}
           >
             <div className="flex items-center gap-3 mb-2">
@@ -676,6 +718,7 @@ export default function AdminPage() {
                   className={`admin-nav-btn ${activeTab === item.id ? "active" : ""}`}
                   onClick={() => {
                     setTab(item.id);
+                    if (item.id === "evento") setIsEditingEvent(false);
                     setMsg(null);
                     setError(null);
                     setFontMenuOpen(false);
@@ -722,10 +765,24 @@ export default function AdminPage() {
                   ☰
                 </button>
                 <div className="min-w-0">
-                  <h1 className="text-xl md:text-2xl font-bold text-white truncate">
-                    {event?.name || tabTitle[activeTab]}
+                  <h1 className="text-xl md:text-2xl font-bold text-white truncate flex items-center gap-2">
+                    <select
+                      value={selectedEventId}
+                      onChange={(e) => {
+                        setSelectedEventId(e.target.value);
+                        setTimeout(() => loadAll(password, { status: filterStatus, category: filterCategory, shirt: filterShirt, q }), 0);
+                      }}
+                      className="bg-transparent border-none outline-none focus:ring-0 text-xl md:text-2xl font-bold p-0 cursor-pointer text-white appearance-none"
+                    >
+                      {events.map(ev => (
+                        <option key={ev.id} value={ev.id} className="text-black text-sm">
+                          {ev.name}
+                        </option>
+                      ))}
+                    </select>
+                    <span className="text-muted text-sm opacity-50">▼</span>
                   </h1>
-                  <p className="text-xs text-muted truncate">
+                  <p className="text-xs text-muted truncate mt-1">
                     {tabTitle[activeTab]} · painel do organizador
                   </p>
                 </div>
@@ -1265,16 +1322,70 @@ export default function AdminPage() {
                 />
               )}
 
-              {activeTab === "evento" && (
+              {activeTab === "evento" && !isEditingEvent && (
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-xl font-bold text-white">Seus Eventos</h2>
+                      <p className="text-sm text-muted mt-1">Gerencie ou crie novas corridas.</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={createEvent}
+                      disabled={saving}
+                      className="rounded-xl bg-brand px-6 py-2.5 font-bold text-white hover:bg-brand-dark transition disabled:opacity-50"
+                    >
+                      {saving ? "Criando..." : "+ Criar Novo Evento"}
+                    </button>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {events.map((ev) => (
+                      <button
+                        key={ev.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedEventId(ev.id);
+                          fillForm(ev);
+                          setIsEditingEvent(true);
+                          setTimeout(() => loadAll(password, { status: filterStatus, category: filterCategory, shirt: filterShirt, q }), 0);
+                        }}
+                        className="text-left rounded-2xl bg-card-2 border border-white/10 p-5 hover:border-brand/50 hover:bg-white/5 transition flex flex-col h-full"
+                      >
+                        <h3 className="font-bold text-white text-lg leading-tight mb-2">{ev.name}</h3>
+                        <p className="text-sm text-muted mb-4">{new Date(ev.event_date).toLocaleDateString('pt-BR')}</p>
+                        
+                        <div className="mt-auto pt-4 border-t border-white/5 flex items-center justify-between">
+                          <span className={`text-xs font-semibold px-2.5 py-1 rounded-lg ${ev.registration_open ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
+                            {ev.registration_open ? 'Aberto' : 'Fechado'}
+                          </span>
+                          <span className="text-xs text-muted">✏️ Editar dados</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {activeTab === "evento" && isEditingEvent && (
                 <form
                   onSubmit={(e) => void saveEvent(e)}
                   className="admin-glass rounded-2xl p-5 md:p-8 space-y-5"
                 >
-                  <div>
-                    <h2 className="text-lg font-bold text-white">Dados da corrida</h2>
-                    <p className="text-sm text-muted mt-1">
-                      Tudo que você mudar aqui aparece no site público.
-                    </p>
+                  <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-4">
+                    <div>
+                      <h2 className="text-lg font-bold text-white">Dados da corrida</h2>
+                      <p className="text-sm text-muted mt-1">
+                        Tudo que você mudar aqui aparece no site público.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingEvent(false)}
+                      className="text-sm font-semibold text-muted hover:text-white"
+                    >
+                      ✕ Fechar
+                    </button>
                   </div>
 
                   <button
