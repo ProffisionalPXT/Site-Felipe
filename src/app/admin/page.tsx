@@ -580,10 +580,8 @@ export default function AdminPage() {
   { id: "resumo", label: "Resumo", icon: "📊" },
   { id: "evento", label: "Eventos", icon: "≡" },
   { id: "visual", label: "Layout", icon: "✨" },
-    { id: "contatos", label: "Contatos", icon: "✉" },
-    { id: "fotos", label: "Fotos", icon: "▣" },
-    { id: "recebimento", label: "Recebimento", icon: "₴" },
-    { id: "cupons", label: "Cupons", icon: "%" },
+    { id: "contatos", label: "Contatos", icon: "📞" },
+    { id: "cupons", label: "Cupons", icon: "🎟️" },
     { id: "senha", label: "Senha", icon: "⚙" },
     { id: "inscritos", label: "Inscritos", icon: "☰" },
   ];
@@ -1368,6 +1366,7 @@ export default function AdminPage() {
               )}
 
               {activeTab === "evento" && isEditingEvent && (
+                <>
                 <form
                   onSubmit={(e) => void saveEvent(e)}
                   className="admin-glass rounded-2xl p-5 md:p-8 space-y-5"
@@ -1535,89 +1534,90 @@ export default function AdminPage() {
                     {saving ? "Salvando…" : "Salvar e atualizar o site"}
                   </button>
                 </form>
-              )}
+                
+                <div className="mt-8 space-y-8 pb-12 border-t border-white/10 pt-8">
+                  {/* FOTOS */}
+                  <div className="admin-glass rounded-2xl p-5 md:p-8 space-y-6">
+                    <div>
+                      <h2 className="text-lg font-bold text-white">Fotos do evento</h2>
+                      <p className="text-sm text-muted mt-1">
+                        Envie fotos (cartaz, percurso, edição anterior). Aparecem na capa e na galeria.
+                      </p>
+                    </div>
 
-              {activeTab === "fotos" && (
-                <div className="admin-glass rounded-2xl p-5 md:p-8 space-y-6">
-                  <div>
-                    <h2 className="text-lg font-bold text-white">Fotos do evento</h2>
-                    <p className="text-sm text-muted mt-1">
-                      Envie fotos (cartaz, percurso, edição anterior). Aparecem na capa e na galeria.
-                    </p>
-                  </div>
+                    <label className="flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-brand/40 bg-brand/5 px-6 py-12 cursor-pointer hover:bg-brand/10 transition">
+                      <span className="text-3xl">📷</span>
+                      <span className="font-semibold text-center text-white">
+                        {uploading ? "Enviando…" : "Toque ou clique para escolher fotos"}
+                      </span>
+                      <span className="text-xs text-muted text-center">
+                        JPG, PNG ou WEBP · até 5 MB cada · pode selecionar várias
+                      </span>
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,image/gif"
+                        multiple
+                        className="hidden"
+                        disabled={uploading}
+                        onChange={(e) => {
+                          void uploadFiles(e.target.files);
+                          e.target.value = "";
+                        }}
+                      />
+                    </label>
 
-                  <label className="flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-brand/40 bg-brand/5 px-6 py-12 cursor-pointer hover:bg-brand/10 transition">
-                    <span className="text-3xl">📷</span>
-                    <span className="font-semibold text-center text-white">
-                      {uploading ? "Enviando…" : "Toque ou clique para escolher fotos"}
-                    </span>
-                    <span className="text-xs text-muted text-center">
-                      JPG, PNG ou WEBP · até 5 MB cada · pode selecionar várias
-                    </span>
-                    <input
-                      type="file"
-                      accept="image/jpeg,image/png,image/webp,image/gif"
-                      multiple
-                      className="hidden"
-                      disabled={uploading}
-                      onChange={(e) => {
-                        void uploadFiles(e.target.files);
-                        e.target.value = "";
-                      }}
-                    />
-                  </label>
+                    {event && event.images.length === 0 && (
+                      <p className="text-sm text-muted text-center py-4">
+                        Nenhuma foto ainda. Envie a primeira — ela vira a capa do site.
+                      </p>
+                    )}
 
-                  {event && event.images.length === 0 && (
-                    <p className="text-sm text-muted text-center py-4">
-                      Nenhuma foto ainda. Envie a primeira — ela vira a capa do site.
-                    </p>
-                  )}
-
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    {event?.images.map((img) => (
-                      <div
-                        key={img.id}
-                        className="rounded-2xl border border-white/10 overflow-hidden bg-black/30"
-                      >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={img.url} alt="" className="h-40 w-full object-cover" />
-                        <div className="p-2 flex flex-wrap gap-1">
-                          {img.is_cover || event.cover_image_url === img.url ? (
-                            <span className="text-[10px] font-bold uppercase bg-brand text-white px-2 py-1 rounded">
-                              Capa do site
-                            </span>
-                          ) : (
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      {event?.images.map((img) => (
+                        <div
+                          key={img.id}
+                          className="rounded-2xl border border-white/10 overflow-hidden bg-black/30"
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={img.url} alt="" className="h-40 w-full object-cover" />
+                          <div className="p-2 flex flex-wrap gap-1">
+                            {img.is_cover || event.cover_image_url === img.url ? (
+                              <span className="text-[10px] font-bold uppercase bg-brand text-white px-2 py-1 rounded">
+                                Capa do site
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => setCover(img)}
+                                className="text-[11px] font-medium bg-white/10 border border-white/10 px-2 py-1 rounded hover:bg-white/15 text-white"
+                              >
+                                Usar como capa
+                              </button>
+                            )}
                             <button
                               type="button"
-                              onClick={() => setCover(img)}
-                              className="text-[11px] font-medium bg-white/10 border border-white/10 px-2 py-1 rounded hover:bg-white/15 text-white"
+                              onClick={() => removeImage(img)}
+                              className="text-[11px] font-medium text-red-300 bg-red-500/15 px-2 py-1 rounded"
                             >
-                              Usar como capa
+                              Remover
                             </button>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => removeImage(img)}
-                            className="text-[11px] font-medium text-red-300 bg-red-500/15 px-2 py-1 rounded"
-                          >
-                            Remover
-                          </button>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
 
-              {activeTab === "recebimento" && (
-                <AdminPaymentTab
-                  password={password}
-                  onMessage={(m, e) => {
-                    setMsg(m);
-                    setError(e);
-                    if (m && !e) showSuccess("Recebimento salvo!", m);
-                  }}
-                />
+                  {/* RECEBIMENTO */}
+                  <AdminPaymentTab
+                    password={password}
+                    onMessage={(m, e) => {
+                      setMsg(m);
+                      setError(e);
+                      if (m && !e) showSuccess("Recebimento salvo!", m);
+                    }}
+                  />
+                </div>
+                </>
               )}
 
               {activeTab === "cupons" && (

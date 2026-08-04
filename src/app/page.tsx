@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { SiteHeader } from "@/components/SiteHeader";
 import { formatDateBR } from "@/lib/format";
 import type { EventPublic } from "@/lib/types";
 
 export default function HomePage() {
+  const router = useRouter();
   const [events, setEvents] = useState<EventPublic[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -16,7 +18,14 @@ export default function HomePage() {
       .then(async (r) => {
         const data = await r.json();
         if (!r.ok) throw new Error(data.error || "Erro ao carregar");
-        setEvents(data.events || []);
+        
+        const evs = data.events || [];
+        setEvents(evs);
+        
+        // Se houver apenas 1 evento, redireciona automaticamente para ele
+        if (evs.length === 1) {
+          router.push(`/evento/${evs[0].id}`);
+        }
       })
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
