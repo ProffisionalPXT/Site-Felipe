@@ -242,15 +242,15 @@ export async function PUT(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const password = req.headers.get("x-admin-password");
   if (!checkAdminPassword(password)) {
-    return NextResponse.json({ error: "N„o autorizado." }, { status: 401 });
+    return NextResponse.json({ error: "N√£o autorizado." }, { status: 401 });
   }
 
   if (isDemoMode()) {
-    return NextResponse.json({ error: "CriaÁ„o de novos eventos n„o permitida no modo demonstraÁ„o." }, { status: 403 });
+    return NextResponse.json({ error: "Cria√ß√£o de novos eventos n√£o permitida no modo demonstra√ß√£o." }, { status: 403 });
   }
 
   if (!isSupabaseConfigured()) {
-    return NextResponse.json({ error: "Supabase n„o configurado." }, { status: 503 });
+    return NextResponse.json({ error: "Supabase n√£o configurado." }, { status: 503 });
   }
 
   try {
