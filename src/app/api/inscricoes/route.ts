@@ -4,7 +4,7 @@ import {
   hashAthletePassword,
   isValidAthletePassword,
 } from "@/lib/athlete-auth";
-import { isDemoMode } from "@/lib/demo-data";
+import { isDemoMode, addDemoRegistration, getDemoEvent, setDemoEvent } from "@/lib/demo-data";
 import { getActiveEvent, getEventById, isValidCpf, onlyDigits } from "@/lib/event";
 import { getServiceSupabase, isSupabaseConfigured } from "@/lib/supabase";
 

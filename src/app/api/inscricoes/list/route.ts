@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { checkAdminPassword } from "@/lib/admin-auth";
-import { DEMO_REGISTRATIONS, getDemoEvent, isDemoMode } from "@/lib/demo-data";
+import { getDemoRegistrations, getDemoEvent, isDemoMode } from "@/lib/demo-data";
 import { getActiveEvent, getEventById } from "@/lib/event";
 import {
   computeStats,
@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
   const eventId = sp.get("eventId")?.trim();
 
   if (isDemoMode()) {
-    const all = [...DEMO_REGISTRATIONS];
+    const all = [...getDemoRegistrations(eventId || getDemoEvent()?.id || "")];
     const filtered = filterRegistrations(all, { q, status, category, shirt });
     return NextResponse.json({
       demo: true,

@@ -144,19 +144,79 @@ function syncEventCounts(ev: EventPublic, regs: RegistrationRow[]): EventPublic 
 }
 
 /** Estado mutável da demo (compartilhado entre APIs enquanto o servidor roda). */
-let demoEvent: EventPublic = syncEventCounts(
-  structuredClone(DEMO_EVENT_INITIAL),
-  DEMO_REGISTRATIONS
-);
 
-export function getDemoEvent(): EventPublic {
-  return demoEvent;
+import fs from 'fs';
+import path from 'path';
+
+let demoEvents: EventPublic[] = [];
+let demoRegistrations: RegistrationRow[] = [];
+
+const DB_FILE = path.join(process.cwd(), '.demo-db.json');
+
+function loadDB() {
+  if (fs.existsSync(DB_FILE)) {
+    try {
+      const data = JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
+      demoEvents = data.events || [];
+      demoRegistrations = data.registrations || [];
+      return;
+    } catch(e) {}
+  }
+  
+  // Initialize default
+  demoEvents = [syncEventCounts(structuredClone(DEMO_EVENT_INITIAL), DEMO_REGISTRATIONS)];
+  demoRegistrations = [...DEMO_REGISTRATIONS];
+  saveDB();
+}
+
+function saveDB() {
+  try {
+    fs.writeFileSync(DB_FILE, JSON.stringify({ events: demoEvents, registrations: demoRegistrations }, null, 2), 'utf8');
+  } catch(e) {}
+}
+
+loadDB();
+
+export function getDemoEvents(): EventPublic[] {
+  return demoEvents;
+}
+
+export function getDemoEvent(id?: string): EventPublic | undefined {
+  if (!id) return demoEvents[0];
+  return demoEvents.find((e: EventPublic) => e.id === id) || demoEvents[0];
 }
 
 export function setDemoEvent(next: EventPublic): void {
-  demoEvent = next;
+  const idx = demoEvents.findIndex((e: EventPublic) => e.id === next.id);
+  if (idx >= 0) {
+    demoEvents[idx] = next;
+  } else {
+    demoEvents.push(next);
+  }
+  saveDB();
 }
 
+export function addDemoEvent(e: EventPublic): void {
+  demoEvents.push(e);
+  saveDB();
+}
+
+export function getDemoRegistrations(eventId: string): RegistrationRow[] {
+  return demoRegistrations.filter((r: RegistrationRow) => r.event_id === eventId);
+}
+
+export function addDemoRegistration(r: RegistrationRow): void {
+  demoRegistrations.push(r);
+  saveDB();
+}
+
+export function updateDemoRegistration(r: RegistrationRow): void {
+  const idx = demoRegistrations.findIndex((x: RegistrationRow) => x.id === r.id);
+  if (idx >= 0) {
+    demoRegistrations[idx] = r;
+    saveDB();
+  }
+}
 export function isDemoMode(): boolean {
   if (process.env.DEMO_MODE === "1" || process.env.DEMO_MODE === "true") {
     return true;

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { checkAdminPassword } from "@/lib/admin-auth";
-import { getDemoEvent, isDemoMode, setDemoEvent } from "@/lib/demo-data";
+import { getDemoEvent, getDemoEvents, addDemoEvent, isDemoMode, setDemoEvent } from "@/lib/demo-data";
 import { getActiveEvent, getEventById } from "@/lib/event";
 import { getPaymentSettingsPublic } from "@/lib/payment-settings";
 import { getServiceSupabase, isSupabaseConfigured } from "@/lib/supabase";
@@ -13,8 +13,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       configured: true,
       demo: true,
-      event: getDemoEvent(),
-      events: [getDemoEvent()],
+      event: getDemoEvent(req.nextUrl.searchParams.get("eventId") || undefined),
+      events: getDemoEvents(),
       payment,
     });
   }
@@ -150,7 +150,7 @@ export async function PUT(req: NextRequest) {
   }
 
   if (isDemoMode()) {
-    const current = getDemoEvent();
+    const current = getDemoEvent(body.id);
     const next = {
       ...current,
       name: body.name.trim(),
@@ -246,7 +246,20 @@ export async function POST(req: NextRequest) {
   }
 
   if (isDemoMode()) {
-    return NextResponse.json({ error: "Criação de novos eventos não permitida no modo demonstração." }, { status: 403 });
+    const newId = crypto.randomUUID();
+    const newEvent = {
+      ...getDemoEvent(),
+      id: newId,
+      name: "Novo Evento",
+      event_date: new Date().toISOString().split("T")[0],
+      price_cents: 0,
+      max_slots: 500,
+      registration_open: false,
+      categories: ["5K", "10K"],
+      shirt_sizes: ["P", "M", "G"],
+    };
+    addDemoEvent(newEvent);
+    return NextResponse.json({ ok: true, event: newEvent });
   }
 
   if (!isSupabaseConfigured()) {

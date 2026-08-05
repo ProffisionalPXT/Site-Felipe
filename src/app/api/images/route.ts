@@ -49,14 +49,21 @@ export async function POST(req: NextRequest) {
   }
 
   if (isDemoMode()) {
-    return NextResponse.json(
-      {
-        error:
-          "Na demonstração o upload real fica desligado. As fotos de exemplo já aparecem no site. Após aprovar, com Supabase o organizador envia as fotos por aqui.",
-        demo: true,
-      },
-      { status: 503 }
-    );
+    const { getDemoEvent, setDemoEvent } = require('@/lib/demo-data');
+    const ev = getDemoEvent();
+    const mockImage = {
+      id: crypto.randomUUID(),
+      event_id: ev?.id || "demo",
+      url: "https://images.unsplash.com/photo-1452626038306-9aae5e071dd3?auto=format&fit=crop&w=1200&q=80",
+      storage_path: "demo/mock.jpg",
+      caption: "Foto adicionada",
+      sort_order: (ev?.images || []).length,
+      is_cover: false,
+      created_at: new Date().toISOString()
+    };
+    const nextEvent = { ...ev, images: [...(ev?.images || []), mockImage] };
+    if (ev) setDemoEvent(nextEvent);
+    return NextResponse.json({ ok: true, demo: true, image: mockImage, event: nextEvent });
   }
 
   if (!isSupabaseConfigured()) {
