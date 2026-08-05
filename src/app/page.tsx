@@ -36,7 +36,7 @@ export default function HomePage() {
         setEvents(evs);
         
         if (evs.length === 1) {
-          router.push(`/evento/\${evs[0].id}`);
+          router.push(`/evento/${evs[0].id}`);
         } else {
           setLoading(false);
         }
