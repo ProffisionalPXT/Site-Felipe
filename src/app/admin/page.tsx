@@ -1100,258 +1100,6 @@ export default function AdminPage() {
                 </div>
               )}
 
-              {activeTab === "visual" && (
-                <form
-                  onSubmit={(e) => {
-                    setFontMenuOpen(false);
-                    setColorMenuOpen(false);
-                    void saveEvent(e);
-                  }}
-                  className="admin-glass rounded-2xl p-5 md:p-8 space-y-6"
-                >
-                  <div>
-                    <h2 className="text-2xl font-black tracking-tight text-white">
-                      Layout da home
-                    </h2>
-                    <p className="text-sm text-muted mt-1">
-                      Escolha o design (como os atletas veem), a fonte e as cores — tudo
-                      nesta aba. Salve e atualize a home (F5).
-                    </p>
-                  </div>
-
-                  <div>
-                    <p className="text-base font-bold mb-3 text-white">
-                      1. Design da página
-                    </p>
-                    <div className="grid sm:grid-cols-2 gap-4">
-                      {LAYOUTS.map((l) => (
-                        <button
-                          key={l.id}
-                          type="button"
-                          onClick={() => setThemeLayout(l.id)}
-                          className={
-                            themeLayout === l.id
-                              ? "rounded-2xl border-2 border-brand p-4 text-left bg-brand/10 shadow-md ring-2 ring-brand/20"
-                              : "rounded-2xl border border-white/10 p-4 text-left bg-white/5 hover:border-brand/40"
-                          }
-                        >
-                          <LayoutWirePreview id={l.id} accent={l.accent} bg={l.previewBg} />
-                          <p className="font-bold text-base mt-3 text-white">{l.name}</p>
-                          <p className="text-xs text-muted mt-1 leading-snug">{l.description}</p>
-                          {themeLayout === l.id && (
-                            <p className="text-[11px] font-bold text-brand mt-2">
-                              ✓ Selecionado
-                            </p>
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Fonte + cor estilo lista (tipo Excel) */}
-                  <div className="grid sm:grid-cols-2 gap-5">
-                    <div>
-                      <p className="text-sm font-bold mb-2 text-white">2. Fonte das letras</p>
-                      <div className="relative">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setFontMenuOpen((o) => !o);
-                            setColorMenuOpen(false);
-                          }}
-                          className="w-full flex items-center justify-between gap-3 rounded-xl border border-white/15 bg-[#1a1f2a] px-3 py-2.5 text-left hover:border-brand/50 transition"
-                          aria-expanded={fontMenuOpen}
-                          aria-haspopup="listbox"
-                        >
-                          <span
-                            className="text-base text-white truncate"
-                            style={{ fontFamily: selectedFont.family }}
-                          >
-                            {selectedFont.name}
-                          </span>
-                          <span className="text-muted text-xs shrink-0">
-                            {fontMenuOpen ? "▲" : "▼"}
-                          </span>
-                        </button>
-                        {fontMenuOpen && (
-                          <ul
-                            role="listbox"
-                            className="absolute z-40 mt-1 w-full max-h-64 overflow-y-auto rounded-xl border border-white/15 bg-[#151922] shadow-2xl shadow-black/50 py-1"
-                          >
-                            {FONTS.map((f) => (
-                              <li key={f.id}>
-                                <button
-                                  type="button"
-                                  role="option"
-                                  aria-selected={themeFont === f.id}
-                                  onClick={() => {
-                                    setThemeFont(f.id);
-                                    setFontMenuOpen(false);
-                                  }}
-                                  className={
-                                    themeFont === f.id
-                                      ? "w-full flex items-center justify-between gap-2 px-3 py-2.5 text-left bg-brand/20 text-white"
-                                      : "w-full flex items-center justify-between gap-2 px-3 py-2.5 text-left text-white/90 hover:bg-white/10"
-                                  }
-                                >
-                                  <span
-                                    className="text-[15px] truncate"
-                                    style={{ fontFamily: f.family }}
-                                  >
-                                    {f.name}
-                                  </span>
-                                  <span className="text-[11px] text-muted shrink-0">
-                                    {f.description}
-                                  </span>
-                                </button>
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                      </div>
-                      <p
-                        className="mt-2 text-sm text-muted"
-                        style={{ fontFamily: selectedFont.family }}
-                      >
-                        Prévia: Aa Bb Cc 123
-                      </p>
-                    </div>
-
-                    <div>
-                      <p className="text-sm font-bold mb-2 text-white">3. Cores da home</p>
-                      <div className="relative">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setColorMenuOpen((o) => !o);
-                            setFontMenuOpen(false);
-                          }}
-                          className="w-full flex items-center justify-between gap-3 rounded-xl border border-white/15 bg-[#1a1f2a] px-3 py-2.5 text-left hover:border-brand/50 transition"
-                          aria-expanded={colorMenuOpen}
-                          aria-haspopup="listbox"
-                        >
-                          <span className="flex items-center gap-2 min-w-0">
-                            <span className="flex gap-1 shrink-0">
-                              <span
-                                className="h-5 w-5 rounded border border-white/20"
-                                style={{ background: selectedColor.vars.brand }}
-                              />
-                              <span
-                                className="h-5 w-5 rounded border border-white/20"
-                                style={{ background: selectedColor.vars.background }}
-                              />
-                              <span
-                                className="h-5 w-5 rounded border border-white/20"
-                                style={{ background: selectedColor.vars.brandSoft }}
-                              />
-                            </span>
-                            <span className="text-sm text-white truncate">
-                              {selectedColor.name}
-                            </span>
-                          </span>
-                          <span className="text-muted text-xs shrink-0">
-                            {colorMenuOpen ? "▲" : "▼"}
-                          </span>
-                        </button>
-                        {colorMenuOpen && (
-                          <ul
-                            role="listbox"
-                            className="absolute z-40 mt-1 w-full max-h-72 overflow-y-auto rounded-xl border border-white/15 bg-[#151922] shadow-2xl shadow-black/50 py-1"
-                          >
-                            {COLORS.map((c) => (
-                              <li key={c.id}>
-                                <button
-                                  type="button"
-                                  role="option"
-                                  aria-selected={themeColor === c.id}
-                                  onClick={() => {
-                                    setThemeColor(c.id);
-                                    setColorMenuOpen(false);
-                                  }}
-                                  className={
-                                    themeColor === c.id
-                                      ? "w-full flex items-center gap-3 px-3 py-2.5 text-left bg-brand/20"
-                                      : "w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-white/10"
-                                  }
-                                >
-                                  <span className="flex gap-1 shrink-0">
-                                    <span
-                                      className="h-5 w-5 rounded border border-white/15"
-                                      style={{ background: c.vars.background }}
-                                    />
-                                    <span
-                                      className="h-5 w-5 rounded border border-white/15"
-                                      style={{ background: c.vars.brand }}
-                                    />
-                                    <span
-                                      className="h-5 w-5 rounded border border-white/15"
-                                      style={{ background: c.vars.brandSoft }}
-                                    />
-                                  </span>
-                                  <span className="min-w-0">
-                                    <span className="block text-sm font-medium text-white truncate">
-                                      {c.name}
-                                    </span>
-                                    <span className="block text-[11px] text-muted truncate">
-                                      {c.description}
-                                    </span>
-                                  </span>
-                                  {themeColor === c.id && (
-                                    <span className="ml-auto text-brand text-xs font-bold">✓</span>
-                                  )}
-                                </button>
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {(fontMenuOpen || colorMenuOpen) && (
-                    <button
-                      type="button"
-                      className="fixed inset-0 z-30 cursor-default bg-transparent"
-                      aria-label="Fechar menu"
-                      onClick={() => {
-                        setFontMenuOpen(false);
-                        setColorMenuOpen(false);
-                      }}
-                    />
-                  )}
-
-                  <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                    <button
-                      type="submit"
-                      disabled={saving}
-                      className="rounded-xl bg-brand px-8 py-3.5 font-bold text-white hover:bg-brand-dark disabled:opacity-60 text-base"
-                    >
-                      {saving ? "Salvando…" : "Salvar e aplicar na home"}
-                    </button>
-                    <a
-                      href="/"
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center justify-center rounded-xl border border-white/15 px-6 py-3.5 text-sm font-semibold hover:bg-white/5"
-                    >
-                      Abrir home →
-                    </a>
-                  </div>
-                </form>
-              )}
-
-              {activeTab === "contatos" && (
-                <AdminContactsTab
-                  event={event}
-                  password={password}
-                  saving={saving}
-                  onSave={(c) => {
-                    setContacts(c);
-                    void saveEvent(undefined, c);
-                  }}
-                />
-              )}
-
               {activeTab === "evento" && !isEditingEvent && (
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">
@@ -1623,7 +1371,259 @@ export default function AdminPage() {
                 </form>
                 
                 <div className="mt-8 space-y-8 pb-12 border-t border-white/10 pt-8">
-                  {/* FOTOS */}
+                  <details className="group border border-white/10 bg-white/5 rounded-2xl mb-8 overflow-hidden"><summary className="font-bold text-lg p-5 cursor-pointer flex justify-between items-center text-white bg-white/5 hover:bg-white/10 transition">🎨 Design da Vitrine<span className="transition group-open:rotate-180">▼</span></summary><div className="p-0">
+                <form
+                  onSubmit={(e) => {
+                    setFontMenuOpen(false);
+                    setColorMenuOpen(false);
+                    void saveEvent(e);
+                  }}
+                  className="admin-glass rounded-2xl p-5 md:p-8 space-y-6"
+                >
+                  <div>
+                    <h2 className="text-2xl font-black tracking-tight text-white">
+                      Layout da home
+                    </h2>
+                    <p className="text-sm text-muted mt-1">
+                      Escolha o design (como os atletas veem), a fonte e as cores — tudo
+                      nesta aba. Salve e atualize a home (F5).
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-base font-bold mb-3 text-white">
+                      1. Design da página
+                    </p>
+                    <div className="grid sm:grid-cols-2 gap-4">
+                      {LAYOUTS.map((l) => (
+                        <button
+                          key={l.id}
+                          type="button"
+                          onClick={() => setThemeLayout(l.id)}
+                          className={
+                            themeLayout === l.id
+                              ? "rounded-2xl border-2 border-brand p-4 text-left bg-brand/10 shadow-md ring-2 ring-brand/20"
+                              : "rounded-2xl border border-white/10 p-4 text-left bg-white/5 hover:border-brand/40"
+                          }
+                        >
+                          <LayoutWirePreview id={l.id} accent={l.accent} bg={l.previewBg} />
+                          <p className="font-bold text-base mt-3 text-white">{l.name}</p>
+                          <p className="text-xs text-muted mt-1 leading-snug">{l.description}</p>
+                          {themeLayout === l.id && (
+                            <p className="text-[11px] font-bold text-brand mt-2">
+                              ✓ Selecionado
+                            </p>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Fonte + cor estilo lista (tipo Excel) */}
+                  <div className="grid sm:grid-cols-2 gap-5">
+                    <div>
+                      <p className="text-sm font-bold mb-2 text-white">2. Fonte das letras</p>
+                      <div className="relative">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFontMenuOpen((o) => !o);
+                            setColorMenuOpen(false);
+                          }}
+                          className="w-full flex items-center justify-between gap-3 rounded-xl border border-white/15 bg-[#1a1f2a] px-3 py-2.5 text-left hover:border-brand/50 transition"
+                          aria-expanded={fontMenuOpen}
+                          aria-haspopup="listbox"
+                        >
+                          <span
+                            className="text-base text-white truncate"
+                            style={{ fontFamily: selectedFont.family }}
+                          >
+                            {selectedFont.name}
+                          </span>
+                          <span className="text-muted text-xs shrink-0">
+                            {fontMenuOpen ? "▲" : "▼"}
+                          </span>
+                        </button>
+                        {fontMenuOpen && (
+                          <ul
+                            role="listbox"
+                            className="absolute z-40 mt-1 w-full max-h-64 overflow-y-auto rounded-xl border border-white/15 bg-[#151922] shadow-2xl shadow-black/50 py-1"
+                          >
+                            {FONTS.map((f) => (
+                              <li key={f.id}>
+                                <button
+                                  type="button"
+                                  role="option"
+                                  aria-selected={themeFont === f.id}
+                                  onClick={() => {
+                                    setThemeFont(f.id);
+                                    setFontMenuOpen(false);
+                                  }}
+                                  className={
+                                    themeFont === f.id
+                                      ? "w-full flex items-center justify-between gap-2 px-3 py-2.5 text-left bg-brand/20 text-white"
+                                      : "w-full flex items-center justify-between gap-2 px-3 py-2.5 text-left text-white/90 hover:bg-white/10"
+                                  }
+                                >
+                                  <span
+                                    className="text-[15px] truncate"
+                                    style={{ fontFamily: f.family }}
+                                  >
+                                    {f.name}
+                                  </span>
+                                  <span className="text-[11px] text-muted shrink-0">
+                                    {f.description}
+                                  </span>
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                      <p
+                        className="mt-2 text-sm text-muted"
+                        style={{ fontFamily: selectedFont.family }}
+                      >
+                        Prévia: Aa Bb Cc 123
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="text-sm font-bold mb-2 text-white">3. Cores da home</p>
+                      <div className="relative">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setColorMenuOpen((o) => !o);
+                            setFontMenuOpen(false);
+                          }}
+                          className="w-full flex items-center justify-between gap-3 rounded-xl border border-white/15 bg-[#1a1f2a] px-3 py-2.5 text-left hover:border-brand/50 transition"
+                          aria-expanded={colorMenuOpen}
+                          aria-haspopup="listbox"
+                        >
+                          <span className="flex items-center gap-2 min-w-0">
+                            <span className="flex gap-1 shrink-0">
+                              <span
+                                className="h-5 w-5 rounded border border-white/20"
+                                style={{ background: selectedColor.vars.brand }}
+                              />
+                              <span
+                                className="h-5 w-5 rounded border border-white/20"
+                                style={{ background: selectedColor.vars.background }}
+                              />
+                              <span
+                                className="h-5 w-5 rounded border border-white/20"
+                                style={{ background: selectedColor.vars.brandSoft }}
+                              />
+                            </span>
+                            <span className="text-sm text-white truncate">
+                              {selectedColor.name}
+                            </span>
+                          </span>
+                          <span className="text-muted text-xs shrink-0">
+                            {colorMenuOpen ? "▲" : "▼"}
+                          </span>
+                        </button>
+                        {colorMenuOpen && (
+                          <ul
+                            role="listbox"
+                            className="absolute z-40 mt-1 w-full max-h-72 overflow-y-auto rounded-xl border border-white/15 bg-[#151922] shadow-2xl shadow-black/50 py-1"
+                          >
+                            {COLORS.map((c) => (
+                              <li key={c.id}>
+                                <button
+                                  type="button"
+                                  role="option"
+                                  aria-selected={themeColor === c.id}
+                                  onClick={() => {
+                                    setThemeColor(c.id);
+                                    setColorMenuOpen(false);
+                                  }}
+                                  className={
+                                    themeColor === c.id
+                                      ? "w-full flex items-center gap-3 px-3 py-2.5 text-left bg-brand/20"
+                                      : "w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-white/10"
+                                  }
+                                >
+                                  <span className="flex gap-1 shrink-0">
+                                    <span
+                                      className="h-5 w-5 rounded border border-white/15"
+                                      style={{ background: c.vars.background }}
+                                    />
+                                    <span
+                                      className="h-5 w-5 rounded border border-white/15"
+                                      style={{ background: c.vars.brand }}
+                                    />
+                                    <span
+                                      className="h-5 w-5 rounded border border-white/15"
+                                      style={{ background: c.vars.brandSoft }}
+                                    />
+                                  </span>
+                                  <span className="min-w-0">
+                                    <span className="block text-sm font-medium text-white truncate">
+                                      {c.name}
+                                    </span>
+                                    <span className="block text-[11px] text-muted truncate">
+                                      {c.description}
+                                    </span>
+                                  </span>
+                                  {themeColor === c.id && (
+                                    <span className="ml-auto text-brand text-xs font-bold">✓</span>
+                                  )}
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {(fontMenuOpen || colorMenuOpen) && (
+                    <button
+                      type="button"
+                      className="fixed inset-0 z-30 cursor-default bg-transparent"
+                      aria-label="Fechar menu"
+                      onClick={() => {
+                        setFontMenuOpen(false);
+                        setColorMenuOpen(false);
+                      }}
+                    />
+                  )}
+
+                  <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                    <button
+                      type="submit"
+                      disabled={saving}
+                      className="rounded-xl bg-brand px-8 py-3.5 font-bold text-white hover:bg-brand-dark disabled:opacity-60 text-base"
+                    >
+                      {saving ? "Salvando…" : "Salvar e aplicar na home"}
+                    </button>
+                    <a
+                      href="/"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center justify-center rounded-xl border border-white/15 px-6 py-3.5 text-sm font-semibold hover:bg-white/5"
+                    >
+                      Abrir home →
+                    </a>
+                  </div>
+                </form>
+              </div></details>
+
+<details className="group border border-white/10 bg-white/5 rounded-2xl mb-8 overflow-hidden"><summary className="font-bold text-lg p-5 cursor-pointer flex justify-between items-center text-white bg-white/5 hover:bg-white/10 transition">📞 Contatos<span className="transition group-open:rotate-180">▼</span></summary><div className="p-0">
+                <AdminContactsTab
+                  event={event}
+                  password={password}
+                  saving={saving}
+                  onSave={(c) => {
+                    setContacts(c);
+                    void saveEvent(undefined, c);
+                  }}
+                />
+              </div></details>
+
+{/* FOTOS */}
                   <div className="admin-glass rounded-2xl p-5 md:p-8 space-y-6">
                     <div>
                       <h2 className="text-lg font-bold text-white">Fotos do evento</h2>
