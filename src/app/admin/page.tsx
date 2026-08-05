@@ -56,6 +56,20 @@ const STATUS_LABEL: Record<string, string> = {
   refunded: "Reembolsada",
 };
 
+function FormAccordion({ title, children, defaultOpen = false }: { title: string; children: React.ReactNode; defaultOpen?: boolean }) {
+  return (
+    <details className="group [&_summary::-webkit-details-marker]:hidden border border-white/10 rounded-2xl bg-white/5 overflow-hidden mb-6" open={defaultOpen}>
+      <summary className="flex cursor-pointer items-center justify-between px-5 py-4 font-bold text-lg text-white bg-white/5 hover:bg-white/10 transition outline-none">
+        {title}
+        <span className="transition group-open:rotate-180">▼</span>
+      </summary>
+      <div className="px-5 py-5 space-y-4 border-t border-white/10">
+        {children}
+      </div>
+    </details>
+  );
+}
+
 export default function AdminPage() {
   const [password, setPassword] = useState("");
   const [authed, setAuthed] = useState(false);
@@ -1172,199 +1186,144 @@ export default function AdminPage() {
                     </button>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => setTab("visual")}
-                    className="w-full rounded-2xl border border-dashed border-brand/40 bg-brand/10 px-4 py-3 text-left hover:bg-brand/15 transition"
-                  >
-                    <p className="font-bold text-white">🎨 Quer mudar o visual da home?</p>
-                    <p className="text-sm text-muted mt-0.5">
-                      Abra <strong className="text-white">Layout</strong> — designs para atletas + fontes
-                    </p>
-                  </button>
-
-                  <Field label="Nome da corrida *">
-                    <input
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      required
-                      className="field"
-                      placeholder="Ex: Corrida Noturna 2026"
-                    />
-                  </Field>
-
-                  <div className="grid sm:grid-cols-2 gap-4">
-                    <Field label="Data *">
+                  <FormAccordion title="📝 Dados Básicos" defaultOpen>
+                    <Field label="Nome da corrida *">
                       <input
-                        type="date"
-                        value={eventDate}
-                        onChange={(e) => setEventDate(e.target.value)}
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
                         required
                         className="field"
+                        placeholder="Ex: Corrida Noturna 2026"
                       />
                     </Field>
-                    <Field label="Horário de largada">
-                      <input
-                        type="time"
-                        value={startTime}
-                        onChange={(e) => setStartTime(e.target.value)}
-                        className="field"
-                      />
-                    </Field>
-                  </div>
 
-                  <div className="grid sm:grid-cols-2 gap-4">
-                    <Field label="Local / endereço">
-                      <input
-                        value={location}
-                        onChange={(e) => setLocation(e.target.value)}
-                        className="field"
-                        placeholder="Parque, avenida…"
-                      />
-                    </Field>
-                    <Field label="Cidade">
-                      <input
-                        value={city}
-                        onChange={(e) => setCity(e.target.value)}
-                        className="field"
-                      />
-                    </Field>
-                  </div>
+                    <div className="grid sm:grid-cols-2 gap-4">
+                      <Field label="Data *">
+                        <input
+                          type="date"
+                          value={eventDate}
+                          onChange={(e) => setEventDate(e.target.value)}
+                          required
+                          className="field"
+                        />
+                      </Field>
+                      <Field label="Horário de largada">
+                        <input
+                          type="time"
+                          value={startTime}
+                          onChange={(e) => setStartTime(e.target.value)}
+                          className="field"
+                        />
+                      </Field>
+                    </div>
 
-                  <div className="grid sm:grid-cols-2 gap-4">
-                    <Field label="Preço do ingresso (R$) *">
-                      <input
-                        value={priceInput}
-                        onChange={(e) => setPriceInput(e.target.value)}
-                        className="field"
-                        placeholder="80,00"
-                        inputMode="decimal"
-                      />
-                    </Field>
-                    <Field label="Quantidade de vagas *">
-                      <input
-                        type="number"
-                        min={1}
-                        value={maxSlots}
-                        onChange={(e) => setMaxSlots(Number(e.target.value))}
-                        className="field"
-                      />
-                    </Field>
-                  </div>
+                    <div className="grid sm:grid-cols-2 gap-4">
+                      <Field label="Local / endereço">
+                        <input
+                          value={location}
+                          onChange={(e) => setLocation(e.target.value)}
+                          className="field"
+                          placeholder="Parque, avenida…"
+                        />
+                      </Field>
+                      <Field label="Cidade">
+                        <input
+                          value={city}
+                          onChange={(e) => setCity(e.target.value)}
+                          className="field"
+                        />
+                      </Field>
+                    </div>
+                  </FormAccordion>
 
-                  <label className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={registrationOpen}
-                      onChange={(e) => setRegistrationOpen(e.target.checked)}
-                      className="h-5 w-5 accent-orange-600"
-                    />
-                    <span>
-                      <strong className="text-white">Inscrições abertas</strong>
-                      <span className="block text-xs text-muted">
-                        Desmarque para fechar as vendas no site
+                  <FormAccordion title="💰 Vendas e Vagas">
+                    <div className="grid sm:grid-cols-2 gap-4">
+                      <Field label="Preço do ingresso (R$) *">
+                        <input
+                          value={priceInput}
+                          onChange={(e) => setPriceInput(e.target.value)}
+                          className="field"
+                          placeholder="80,00"
+                          inputMode="decimal"
+                        />
+                      </Field>
+                      <Field label="Quantidade de vagas *">
+                        <input
+                          type="number"
+                          min={1}
+                          value={maxSlots}
+                          onChange={(e) => setMaxSlots(Number(e.target.value))}
+                          className="field"
+                        />
+                      </Field>
+                    </div>
+
+                    <label className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 cursor-pointer mt-4">
+                      <input
+                        type="checkbox"
+                        checked={registrationOpen}
+                        onChange={(e) => setRegistrationOpen(e.target.checked)}
+                        className="h-5 w-5 accent-orange-600"
+                      />
+                      <span>
+                        <strong className="text-white">Inscrições abertas</strong>
+                        <span className="block text-xs text-muted">
+                          Desmarque para fechar as vendas no site
+                        </span>
                       </span>
-                    </span>
-                  </label>
+                    </label>
+                  </FormAccordion>
 
-                  <Field label="Descrição (aparece no site)">
-                    <textarea
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
-                      rows={4}
-                      className="field"
-                      placeholder="Fale sobre a corrida, o kit, o percurso…"
-                    />
-                  </Field>
-
-                  <Field label="Regulamento">
-                    <textarea
-                      value={regulations}
-                      onChange={(e) => setRegulations(e.target.value)}
-                      rows={5}
-                      className="field"
-                      placeholder="Regras, idade mínima, o que está incluso…"
-                    />
-                  </Field>
-
-                  <div className="grid sm:grid-cols-2 gap-4">
-                    <Field label="Categorias (uma por linha)">
+                  <FormAccordion title="📄 Detalhes e Regulamento">
+                    <Field label="Descrição (aparece no site)">
                       <textarea
-                        value={categoriesText}
-                        onChange={(e) => setCategoriesText(e.target.value)}
-                        rows={5}
-                        className="field font-mono text-sm"
-                        placeholder={"5K\n10K\nCaminhada"}
-                      />
-                      <p className="text-xs text-muted mt-1">
-                        Ex.: 5K, 10K, Caminhada — o atleta escolhe no checkout
-                      </p>
-                    </Field>
-                    <Field label="Tamanhos de camiseta (um por linha)">
-                      <textarea
-                        value={sizesText}
-                        onChange={(e) => setSizesText(e.target.value)}
-                        rows={5}
-                        className="field font-mono text-sm"
-                        placeholder={"P\nM\nG\nGG"}
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        rows={4}
+                        className="field"
+                        placeholder="Fale sobre a corrida, o kit, o percurso…"
                       />
                     </Field>
-                  </div>
+
+                    <Field label="Regulamento">
+                      <textarea
+                        value={regulations}
+                        onChange={(e) => setRegulations(e.target.value)}
+                        rows={5}
+                        className="field"
+                        placeholder="Regras, idade mínima, o que está incluso…"
+                      />
+                    </Field>
+                  </FormAccordion>
+
+                  <FormAccordion title="👕 Categorias e Kits">
+                    <div className="grid sm:grid-cols-2 gap-4">
+                      <Field label="Categorias (uma por linha)">
+                        <textarea
+                          value={categoriesText}
+                          onChange={(e) => setCategoriesText(e.target.value)}
+                          rows={5}
+                          className="field font-mono text-sm"
+                          placeholder={"5K\n10K\nCaminhada"}
+                        />
+                        <p className="text-xs text-muted mt-1">
+                          Ex.: 5K, 10K, Caminhada — o atleta escolhe no checkout
+                        </p>
+                      </Field>
+                      <Field label="Tamanhos de camiseta (um por linha)">
+                        <textarea
+                          value={sizesText}
+                          onChange={(e) => setSizesText(e.target.value)}
+                          rows={5}
+                          className="field font-mono text-sm"
+                          placeholder={"P\nM\nG\nGG"}
+                        />
+                      </Field>
+                    </div>
+                  </FormAccordion>
 
                   
-        {/* === CONFIGURAÇÕES DE VISUAL === */}
-        <div className="mt-8 rounded-2xl border border-white/5 bg-white/5 p-6 space-y-6">
-          <div className="flex items-center gap-2 mb-4">
-            <span className="text-xl">🎨</span>
-            <h3 className="text-lg font-bold">Identidade Visual do Evento</h3>
-          </div>
-          
-          <div className="grid md:grid-cols-3 gap-6">
-            <div>
-              <label className="mb-1 block text-sm text-slate-400">Layout</label>
-              <select
-                className="w-full rounded-xl bg-black/40 border border-white/10 px-4 py-2"
-                value={themeLayout || "default"}
-                onChange={(e) => setThemeLayout(e.target.value as any)}
-              >
-                <option value="default">Clássico / Padrão</option>
-                <option value="split">Moderno (Dividido)</option>
-                <option value="revista">Revista / Editorial</option>
-                <option value="poster">Pôster</option>
-                <option value="minimal">Minimalista</option>
-              </select>
-            </div>
-            <div>
-              <label className="mb-1 block text-sm text-slate-400">Tipografia (Fonte)</label>
-              <select
-                className="w-full rounded-xl bg-black/40 border border-white/10 px-4 py-2"
-                value={themeFont || "sans"}
-                onChange={(e) => setThemeFont(e.target.value as any)}
-              >
-                <option value="sans">Sem Serifa (Moderna)</option>
-                <option value="serif">Com Serifa (Clássica)</option>
-                <option value="mono">Monoespaçada (Tech)</option>
-                <option value="display">Display (Impacto)</option>
-                <option value="rounded">Arredondada (Amigável)</option>
-              </select>
-            </div>
-            <div>
-              <label className="mb-1 block text-sm text-slate-400">Cor Principal</label>
-              <select
-                className="w-full rounded-xl bg-black/40 border border-white/10 px-4 py-2"
-                value={themeColor || "brand"}
-                onChange={(e) => setThemeColor(e.target.value as any)}
-              >
-                <option value="brand">Laranja (Padrão)</option>
-                <option value="blue">Azul</option>
-                <option value="green">Verde</option>
-                <option value="red">Vermelho</option>
-                <option value="purple">Roxo</option>
-                <option value="dark">Preto/Escuro</option>
-              </select>
-            </div>
-          </div>
-        </div>
+
 
                   <div className="flex flex-col sm:flex-row gap-3">
                     <button
@@ -1641,7 +1600,7 @@ export default function AdminPage() {
               </div></details>
 
 {/* FOTOS */}
-                  <div className="admin-glass rounded-2xl p-5 md:p-8 space-y-6">
+                  <FormAccordion title="🖼️ Fotos e Imagens">
                     <div>
                       <h2 className="text-lg font-bold text-white">Fotos do evento</h2>
                       <p className="text-sm text-muted mt-1">
@@ -1709,7 +1668,31 @@ export default function AdminPage() {
                         </div>
                       ))}
                     </div>
-                  </div>
+
+                    <div className="mt-8 border-t border-white/10 pt-6">
+                      <h3 className="text-sm font-bold text-white mb-3">Ajuste da Capa do Site</h3>
+                      <label className="block text-sm text-slate-400 mb-2">
+                        Posição Vertical da Foto Principal ({coverPositionY}%)
+                      </label>
+                      <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        value={coverPositionY}
+                        onChange={(e) => setCoverPositionY(Number(e.target.value))}
+                        className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer accent-brand"
+                      />
+                      <div className="flex justify-between text-xs text-muted mt-1">
+                        <span>Topo (0%)</span>
+                        <span>Centro (50%)</span>
+                        <span>Base (100%)</span>
+                      </div>
+                      <p className="text-xs text-muted mt-2">
+                        Use isso para evitar que a cabeça das pessoas seja cortada na página inicial. 
+                        Recomendado: 20% a 30% para priorizar o topo da foto. Você deve clicar em "Salvar e atualizar o site" no formulário acima para aplicar.
+                      </p>
+                    </div>
+                  </FormAccordion>
 
                   {/* RECEBIMENTO */}
                   <AdminPaymentTab

@@ -17,7 +17,7 @@ export function HomeLayoutMinimal({ events }: { events: EventPublic[] }) {
           >
             <div className="md:w-64 h-48 md:h-auto shrink-0 relative overflow-hidden">
               {ev.cover_image_url ? (
-                <img src={ev.cover_image_url} alt={ev.name} className="absolute inset-0 h-full w-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" />
+                <img src={ev.cover_image_url} alt={ev.name} className="absolute inset-0 h-full w-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" style={{ objectPosition: `center ${ev.cover_position_y ?? 50}%` }} />
               ) : (
                 <div className="absolute inset-0 bg-slate-900" />
               )}

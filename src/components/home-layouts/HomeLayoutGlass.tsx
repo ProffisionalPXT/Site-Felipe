@@ -18,7 +18,7 @@ export function HomeLayoutGlass({ events }: { events: EventPublic[] }) {
           >
             <div className="h-[220px] w-full relative overflow-hidden rounded-t-[32px] shrink-0">
               {ev.cover_image_url ? (
-                <img src={ev.cover_image_url} alt={ev.name} className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                <img src={ev.cover_image_url} alt={ev.name} className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-110" style={{ objectPosition: `center ${ev.cover_position_y ?? 50}%` }} />
               ) : (
                 <div className="absolute inset-0 bg-slate-800" />
               )}

@@ -18,7 +18,7 @@ export function HomeLayout3D({ events }: { events: EventPublic[] }) {
           >
             <div className="absolute inset-0 rounded-[2rem] bg-slate-800 shadow-[0_20px_50px_rgba(0,0,0,0.5)] group-hover:shadow-[0_30px_60px_rgba(0,123,255,0.2)] transition-shadow duration-500 overflow-hidden border border-white/5">
               {ev.cover_image_url ? (
-                <img src={ev.cover_image_url} alt={ev.name} className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                <img src={ev.cover_image_url} alt={ev.name} className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-110" style={{ objectPosition: `center ${ev.cover_position_y ?? 50}%` }} />
               ) : (
                 <div className="absolute inset-0 bg-[#041630]" />
               )}

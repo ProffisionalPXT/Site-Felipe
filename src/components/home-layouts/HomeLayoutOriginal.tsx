@@ -20,6 +20,7 @@ export function HomeLayoutOriginal({ events }: { events: EventPublic[] }) {
                 src={ev.cover_image_url}
                 alt={ev.name}
                 className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                style={{ objectPosition: `center ${ev.cover_position_y ?? 50}%` }}
               />
             ) : (
               <div className="absolute inset-0 flex items-center justify-center bg-slate-800 text-slate-500">Sem Foto</div>
