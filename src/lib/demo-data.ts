@@ -15,6 +15,7 @@ export const DEMO_EVENT_INITIAL: EventPublic = {
   price_cents: 8900,
   max_slots: 500,
   registration_open: true,
+  cover_position_y: 50,
   cover_image_url:
     "https://images.unsplash.com/photo-1452626038306-9aae5e071dd3?auto=format&fit=crop&w=1600&q=80",
   categories: ["5K", "10K", "Caminhada 3K"],

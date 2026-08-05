@@ -382,9 +382,37 @@ export default function AdminPage() {
       fillForm(newEvent);
       
       showSuccess("Novo evento criado!", "Preencha os dados e salve.");
-    } catch (err) {
+    } catch (err: any) {
       setError(err instanceof Error ? err.message : "Erro ao criar");
     } finally {
+      setSaving(false);
+    }
+  }
+
+  async function deleteEvent() {
+    const pw = prompt("Digite a senha de administrador para excluir o evento:");
+    if (!pw) return;
+    if (pw !== password) {
+      alert("Senha incorreta.");
+      return;
+    }
+    
+    if (!confirm("Tem certeza ABSOLUTA que deseja excluir este evento e TODAS as suas inscrições? Isso não pode ser desfeito.")) {
+      return;
+    }
+    
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/event?id=${selectedEventId || event?.id}`, {
+        method: "DELETE",
+        headers: { "x-admin-password": password }
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Erro ao excluir");
+      alert("Evento excluído com sucesso.");
+      window.location.reload();
+    } catch (err: any) {
+      alert(err.message);
       setSaving(false);
     }
   }

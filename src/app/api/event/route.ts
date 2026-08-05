@@ -302,3 +302,28 @@ export async function POST(req: NextRequest) {
   }
 }
 
+
+
+
+export async function DELETE(req: NextRequest) {
+  const password = req.headers.get("x-admin-password");
+  if (!checkAdminPassword(password)) {
+    return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
+  }
+
+  const id = req.nextUrl.searchParams.get("id");
+  if (!id) return NextResponse.json({ error: "ID não fornecido." }, { status: 400 });
+
+  if (isDemoMode()) {
+    return NextResponse.json({ error: "Demonstração não permite excluir." }, { status: 400 });
+  }
+
+  try {
+    const supabase = getServiceSupabase();
+    const { error } = await supabase.from("events").delete().eq("id", id);
+    if (error) throw error;
+    return NextResponse.json({ ok: true });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message || "Erro ao excluir evento" }, { status: 500 });
+  }
+}
