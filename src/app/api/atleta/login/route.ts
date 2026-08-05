@@ -113,7 +113,7 @@ export async function POST(req: NextRequest) {
       demo: true,
       cpf_masked: maskCpf(cpf),
       registrations: regs.map((r) =>
-        toPublic(r, ev.name, ev.event_date, ev.location, ev.city)
+        toPublic(r, ev?.name || "Evento", ev?.event_date || "", ev?.location || "", ev?.city || "")
       ),
     });
   }

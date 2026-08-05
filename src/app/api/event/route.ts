@@ -152,6 +152,8 @@ export async function PUT(req: NextRequest) {
 
   if (isDemoMode()) {
     const current = getDemoEvent(body.id);
+    if (!current) return NextResponse.json({ error: "Evento não encontrado na demo." }, { status: 404 });
+    
     const next = {
       ...current,
       name: body.name.trim(),
@@ -248,8 +250,10 @@ export async function POST(req: NextRequest) {
 
   if (isDemoMode()) {
     const newId = crypto.randomUUID();
+    const base = getDemoEvent();
+    if (!base) return NextResponse.json({ error: "Demo-base não encontrado." }, { status: 500 });
     const newEvent = {
-      ...getDemoEvent(),
+      ...base,
       id: newId,
       name: "Novo Evento",
       event_date: new Date().toISOString().split("T")[0],

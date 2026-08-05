@@ -47,7 +47,7 @@ export async function PATCH(
         category,
         shirt_size,
         status: "pending",
-        amount_cents: getDemoEvent().price_cents,
+        amount_cents: (getDemoEvent()?.price_cents || 0),
       },
     });
   }

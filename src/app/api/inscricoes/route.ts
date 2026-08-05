@@ -61,12 +61,13 @@ export async function POST(req: NextRequest) {
       );
     }
     const ev = (await import("@/lib/demo-data")).getDemoEvent();
+    if (!ev) return NextResponse.json({ error: "Evento demo não encontrado" }, { status: 500 });
     const id = crypto.randomUUID();
     return NextResponse.json({
       demo: true,
       registration: {
         id,
-        event_id: ev.id,
+        event_id: (ev?.id || ""),
         full_name: data.full_name.trim(),
         cpf,
         birth_date: data.birth_date || null,
@@ -77,7 +78,7 @@ export async function POST(req: NextRequest) {
         status: "pending",
         payment_id: null,
         payment_method: null,
-        amount_cents: ev.price_cents,
+        amount_cents: (ev?.price_cents || 0),
         coupon_code: null,
         discount_cents: 0,
         created_at: new Date().toISOString(),

@@ -189,9 +189,9 @@ export function getDemoEvents(): EventPublic[] {
   return demoEvents;
 }
 
-export function getDemoEvent(id?: string): EventPublic | undefined {
-  if (!id) return demoEvents[0];
-  return demoEvents.find((e: EventPublic) => e.id === id) || demoEvents[0];
+export function getDemoEvent(id?: string): EventPublic {
+  if (!id) return demoEvents[0] || (DEMO_EVENT_INITIAL as any);
+  return (demoEvents.find((e: EventPublic) => e.id === id) || demoEvents[0] || DEMO_EVENT_INITIAL) as EventPublic;
 }
 
 export function setDemoEvent(next: EventPublic): void {

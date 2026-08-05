@@ -84,10 +84,7 @@ export async function POST(req: NextRequest) {
       registrations: regs.map((r) =>
         publicReg(
           r,
-          ev.name,
-          ev.event_date,
-          ev.location,
-          ev.city
+          ev?.name || "Evento", ev?.event_date || "", ev?.location || "", ev?.city || ""
         )
       ),
     });
