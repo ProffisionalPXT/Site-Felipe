@@ -145,16 +145,24 @@ function syncEventCounts(ev: EventPublic, regs: RegistrationRow[]): EventPublic 
 
 /** Estado mutável da demo (compartilhado entre APIs enquanto o servidor roda). */
 
-import fs from 'fs';
-import path from 'path';
+
 
 let demoEvents: EventPublic[] = [];
 let demoRegistrations: RegistrationRow[] = [];
 
-const DB_FILE = path.join(process.cwd(), '.demo-db.json');
+
+  let fs: any;
+  let path: any;
+  let DB_FILE = '';
+  if (typeof window === 'undefined') {
+    fs = eval("require('fs')");
+    path = eval("require('path')");
+    DB_FILE = path.join(process.cwd(), '.demo-db.json');
+  }
+  
 
 function loadDB() {
-  if (fs.existsSync(DB_FILE)) {
+  if (fs && fs.existsSync(DB_FILE)) {
     try {
       const data = JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
       demoEvents = data.events || [];
@@ -171,7 +179,7 @@ function loadDB() {
 
 function saveDB() {
   try {
-    fs.writeFileSync(DB_FILE, JSON.stringify({ events: demoEvents, registrations: demoRegistrations }, null, 2), 'utf8');
+    if (fs) fs.writeFileSync(DB_FILE, JSON.stringify({ events: demoEvents, registrations: demoRegistrations }, null, 2), 'utf8');
   } catch(e) {}
 }
 

@@ -715,7 +715,7 @@ export default function AdminPage() {
                   type="button"
                   className={`admin-nav-btn ${activeTab === item.id ? "active" : ""}`}
                   onClick={() => {
-                    setTab(item.id);
+                    setTab(item.id as Tab);
                     if (item.id === "evento") setIsEditingEvent(false);
                     setMsg(null);
                     setError(null);

@@ -1,5 +1,5 @@
 import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses";
-import { formatCurrency } from "./format";
+import { formatBRL } from "./format";
 
 // Configuração do SES - O SDK automaticamente pega AWS_ACCESS_KEY_ID e AWS_SECRET_ACCESS_KEY do env
 const sesClient = new SESClient({
@@ -26,7 +26,7 @@ export async function sendPaymentConfirmationEmail({
     return;
   }
 
-  const amount = formatCurrency(amountCents / 100);
+  const amount = formatBRL(amountCents / 100);
   
   // URL para acessar o comprovante/qrcode no site
   // O ideal seria pegar a BASE_URL do .env, mas podemos montar uma relativa ou deixar fixo para produção
