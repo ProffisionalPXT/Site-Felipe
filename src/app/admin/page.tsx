@@ -580,7 +580,7 @@ export default function AdminPage() {
   { id: "layout", label: "Layout da Vitrine", icon: "✨" },
   { id: "resumo", label: "Resumo", icon: "📊" },
   { id: "evento", label: "Eventos", icon: "≡" },
-  { id: "visual", label: "Layout", icon: "✨" },
+  { id: "visual", label: "Layout do Evento", icon: "🎨" },
     { id: "contatos", label: "Contatos", icon: "📞" },
     { id: "cupons", label: "Cupons", icon: "🎟️" },
     { id: "senha", label: "Senha", icon: "⚙" },
@@ -891,6 +891,7 @@ export default function AdminPage() {
                 </div>
               )}
 
+              {activeTab === "layout" && <AdminLayoutTab onMessage={(m, e) => { setMsg(m); setError(e); if(m && !e) showSuccess(m, null); }} />}
               {activeTab === "resumo" && stats && event && (
                 <div className="space-y-5">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

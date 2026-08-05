@@ -54,9 +54,9 @@ button {
   --card-2: rgba(28, 32, 44, 0.85);
   --muted: #94a3b8;
   --border: rgba(255, 255, 255, 0.1);
-  --brand: #ff6a1a;
-  --brand-dark: #e05500;
-  --brand-soft: #ff8f4d;
+  --brand: #007BFF;
+  --brand-dark: #0056B3;
+  --brand-soft: #4da3ff;
   --sidebar: #0e1118;
   --glass: rgba(18, 22, 32, 0.55);
   background: var(--background);
@@ -83,8 +83,8 @@ button {
 }
 
 .admin-theme .field:focus {
-  box-shadow: 0 0 0 3px rgba(255, 106, 26, 0.25);
-  border-color: rgba(255, 106, 26, 0.5);
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+  border-color: rgba(0, 123, 255, 0.5);
 }
 
 .admin-theme .admin-glass {
@@ -106,7 +106,7 @@ button {
   display: block;
   height: 100%;
   border-radius: 999px;
-  background: linear-gradient(90deg, #ff6a1a, #ff9a4d);
+  background: linear-gradient(90deg, #007BFF, #4da3ff);
 }
 
 .admin-shell {
@@ -168,8 +168,8 @@ button {
 
 .admin-nav-btn.active {
   color: #fff;
-  background: linear-gradient(90deg, #ff6a1a 0%, #ff8534 100%);
-  box-shadow: 0 4px 16px rgba(255, 106, 26, 0.35);
+  background: linear-gradient(90deg, #007BFF 0%, #0099FF 100%);
+  box-shadow: 0 4px 16px rgba(0, 123, 255, 0.35);
   font-weight: 600;
 }
 
