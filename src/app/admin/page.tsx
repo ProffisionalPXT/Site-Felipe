@@ -1539,8 +1539,8 @@ export default function AdminPage() {
               <label className="mb-1 block text-sm text-slate-400">Layout</label>
               <select
                 className="w-full rounded-xl bg-black/40 border border-white/10 px-4 py-2"
-                value={form.theme_layout || "default"}
-                onChange={(e) => setForm({ ...form, theme_layout: e.target.value })}
+                value={themeLayout || "default"}
+                onChange={(e) => setThemeLayout(e.target.value as any)}
               >
                 <option value="default">Clássico / Padrão</option>
                 <option value="split">Moderno (Dividido)</option>
@@ -1553,8 +1553,8 @@ export default function AdminPage() {
               <label className="mb-1 block text-sm text-slate-400">Tipografia (Fonte)</label>
               <select
                 className="w-full rounded-xl bg-black/40 border border-white/10 px-4 py-2"
-                value={form.theme_font || "sans"}
-                onChange={(e) => setForm({ ...form, theme_font: e.target.value })}
+                value={themeFont || "sans"}
+                onChange={(e) => setThemeFont(e.target.value as any)}
               >
                 <option value="sans">Sem Serifa (Moderna)</option>
                 <option value="serif">Com Serifa (Clássica)</option>
@@ -1567,8 +1567,8 @@ export default function AdminPage() {
               <label className="mb-1 block text-sm text-slate-400">Cor Principal</label>
               <select
                 className="w-full rounded-xl bg-black/40 border border-white/10 px-4 py-2"
-                value={form.theme_color || "brand"}
-                onChange={(e) => setForm({ ...form, theme_color: e.target.value })}
+                value={themeColor || "brand"}
+                onChange={(e) => setThemeColor(e.target.value as any)}
               >
                 <option value="brand">Laranja (Padrão)</option>
                 <option value="blue">Azul</option>
