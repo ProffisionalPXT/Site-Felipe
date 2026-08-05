@@ -7,7 +7,7 @@ export function SiteHeader({ solid = false }: { solid?: boolean }) {
   const pathname = usePathname() || "/";
 
   // Extract eventId from URL if we are inside an event
-  const match = pathname.match(/^\\/evento\\/([^/]+)/);
+  const match = pathname.match(/^\/evento\/([^\/]+)/);
   const eventId = match ? match[1] : null;
 
   const TABS = eventId ? [
