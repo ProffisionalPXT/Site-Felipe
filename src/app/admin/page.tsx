@@ -160,6 +160,7 @@ export default function AdminPage() {
   const [themeLayout, setThemeLayout] = useState<LayoutId>("bilheteria");
   const [themeFont, setThemeFont] = useState<FontId>("geist");
   const [themeColor, setThemeColor] = useState<ColorId>("laranja");
+  const [coverPositionY, setCoverPositionY] = useState(50);
   const [contacts, setContacts] = useState<ContactForm>({
     contact_email: "",
     contact_whatsapp: "",
@@ -191,6 +192,7 @@ export default function AdminPage() {
     setThemeLayout(resolveLayout(ev.theme_layout));
     setThemeFont(resolveFont(ev.theme_font));
     setThemeColor(resolveColor(ev.theme_color));
+    setCoverPositionY(ev.cover_position_y ?? 50);
     setContacts({
       contact_email: ev.contact_email || "",
       contact_whatsapp: ev.contact_whatsapp || "",
@@ -474,6 +476,7 @@ export default function AdminPage() {
           theme_layout: resolveLayout(themeLayout),
           theme_font: resolveFont(themeFont),
           theme_color: resolveColor(themeColor),
+          cover_position_y: coverPositionY,
           ...c,
         }),
       });
