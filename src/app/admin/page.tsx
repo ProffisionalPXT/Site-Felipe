@@ -37,6 +37,7 @@ import {
 import type { EventImage, EventPublic, RegistrationRow } from "@/lib/types";
 
 type Tab =
+  | "layout"
   | "resumo"
   | "evento"
   | "visual"
