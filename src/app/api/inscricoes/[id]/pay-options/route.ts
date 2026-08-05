@@ -6,12 +6,14 @@ import {
 import { getActiveEvent, getEventById, isValidCpf, onlyDigits } from "@/lib/event";
 import { getServiceSupabase, isSupabaseConfigured } from "@/lib/supabase";
 import { isDemoMode, getDemoEvent } from "@/lib/demo-data";
+import { validateCouponCode } from "@/lib/coupons";
 
 const bodySchema = z.object({
   cpf: z.string().min(11).max(14),
   password: z.string().min(4).max(72),
   category: z.string().min(1).max(60),
   shirt_size: z.string().min(1).max(20),
+  coupon_code: z.string().optional(),
 });
 
 /**
@@ -36,9 +38,15 @@ export async function PATCH(
   }
 
   const cpf = onlyDigits(parsed.data.cpf);
-  const { password, category, shirt_size } = parsed.data;
+  const { password, category, shirt_size, coupon_code } = parsed.data;
 
   if (isDemoMode()) {
+    let finalAmount = getDemoEvent()?.price_cents || 0;
+    if (coupon_code) {
+      const v = await validateCouponCode(coupon_code, finalAmount);
+      if (!v.ok) return NextResponse.json({ error: v.error }, { status: 400 });
+      finalAmount = v.final_cents!;
+    }
     return NextResponse.json({
       ok: true,
       demo: true,
@@ -47,7 +55,7 @@ export async function PATCH(
         category,
         shirt_size,
         status: "pending",
-        amount_cents: (getDemoEvent()?.price_cents || 0),
+        amount_cents: finalAmount,
       },
     });
   }
@@ -95,12 +103,28 @@ export async function PATCH(
       );
     }
 
+    let finalAmount = event.price_cents;
+    let validCouponCode: string | null = null;
+    let discountCents = 0;
+    
+    if (coupon_code) {
+      const v = await validateCouponCode(coupon_code, event.price_cents);
+      if (!v.ok) {
+        return NextResponse.json({ error: v.error }, { status: 400 });
+      }
+      finalAmount = v.final_cents!;
+      validCouponCode = v.coupon!.code;
+      discountCents = v.discount_cents!;
+    }
+
     const { data: updated, error: upErr } = await supabase
       .from("registrations")
       .update({
         category,
         shirt_size,
-        amount_cents: event.price_cents,
+        amount_cents: finalAmount,
+        coupon_code: validCouponCode,
+        discount_cents: discountCents,
       })
       .eq("id", id)
       .select("id, category, shirt_size, status, amount_cents")

@@ -8,6 +8,7 @@ import {
 import { isDemoMode, addDemoRegistration, getDemoEvent, setDemoEvent } from "@/lib/demo-data";
 import { getActiveEvent, getEventById, isValidCpf, onlyDigits } from "@/lib/event";
 import { getServiceSupabase, isSupabaseConfigured } from "@/lib/supabase";
+import { validateCouponCode } from "@/lib/coupons";
 
 const bodySchema = z.object({
   event_id: z.string().uuid().optional(),
@@ -20,6 +21,7 @@ const bodySchema = z.object({
   category: z.string().min(1).max(60),
   /** Senha da área do atleta (obrigatória na inscrição) */
   access_password: z.string().min(4).max(72),
+  coupon_code: z.string().optional(),
 });
 
 /**
@@ -79,7 +81,7 @@ export async function POST(req: NextRequest) {
         payment_id: null,
         payment_method: null,
         amount_cents: (ev?.price_cents || 0),
-        coupon_code: null,
+        coupon_code: data.coupon_code || null,
         discount_cents: 0,
         created_at: new Date().toISOString(),
       },
@@ -145,6 +147,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    let finalAmount = event.price_cents;
+    let validCouponCode: string | null = null;
+    let discountCents = 0;
+    
+    if (data.coupon_code) {
+      const v = await validateCouponCode(data.coupon_code, event.price_cents);
+      if (!v.ok) {
+        return NextResponse.json({ error: v.error }, { status: 400 });
+      }
+      finalAmount = v.final_cents!;
+      validCouponCode = v.coupon!.code;
+      discountCents = v.discount_cents!;
+    }
+
     const payload = {
       event_id: event.id,
       full_name: data.full_name.trim(),
@@ -155,11 +171,11 @@ export async function POST(req: NextRequest) {
       shirt_size: data.shirt_size,
       category: data.category,
       status: "pending" as const,
-      amount_cents: event.price_cents,
+      amount_cents: finalAmount,
       payment_id: null,
       payment_method: null,
-      coupon_code: null,
-      discount_cents: 0,
+      coupon_code: validCouponCode,
+      discount_cents: discountCents,
       access_password_hash: passwordHash,
     };
 

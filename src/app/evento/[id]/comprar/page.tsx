@@ -59,6 +59,10 @@ function ComprarContent() {
   const [category, setCategory] = useState("");
   const [shirtSize, setShirtSize] = useState("");
   const [guestSubmitting, setGuestSubmitting] = useState(false);
+  
+  const [couponInput, setCouponInput] = useState("");
+  const [couponVal, setCouponVal] = useState<{ ok: boolean; error?: string; code?: string; final_cents?: number; label?: string } | null>(null);
+  const [applyingCoupon, setApplyingCoupon] = useState(false);
 
   const loginWith = useCallback(async (cpf: string, password: string) => {
     const res = await fetch("/api/atleta/login", {
@@ -81,6 +85,31 @@ function ComprarContent() {
     saveTimedSession(ATHLETE_SESSION_KEY, sess);
     return list;
   }, [eventId]);
+
+  async function applyCoupon() {
+    if (!couponInput) {
+      setCouponVal(null);
+      return;
+    }
+    setApplyingCoupon(true);
+    setCouponVal(null);
+    try {
+      const selected = regs.find((r) => r.id === selectedId) || null;
+      const p = selected?.amount_cents ?? event?.price_cents ?? 0;
+      const res = await fetch("/api/cupons/validar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: couponInput, price_cents: p }),
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || "Cupom inválido");
+      setCouponVal({ ok: true, code: data.code, final_cents: data.final_cents, label: data.label });
+    } catch (err) {
+      setCouponVal({ ok: false, error: err instanceof Error ? err.message : "Erro no cupom" });
+    } finally {
+      setApplyingCoupon(false);
+    }
+  }
 
   useEffect(() => {
     if (!eventId) return;
@@ -130,7 +159,7 @@ function ComprarContent() {
   }
 
   const selected = regs.find((r) => r.id === selectedId) || null;
-  const base = selected?.amount_cents ?? event?.price_cents ?? 0;
+  const base = couponVal?.ok ? couponVal.final_cents! : (selected?.amount_cents ?? event?.price_cents ?? 0);
   const cardTotal = applyCardFeeCents(base, cardFeePercent);
   const payTotal = payMethod === "card" ? cardTotal : base;
 
@@ -179,6 +208,7 @@ function ComprarContent() {
           password: session.password,
           category,
           shirt_size: shirtSize,
+          coupon_code: couponVal?.ok ? couponVal.code : undefined,
         }),
       });
       const upData = await up.json();
@@ -209,6 +239,7 @@ function ComprarContent() {
       shirt_size: shirtSize,
       category,
       access_password: password,
+      coupon_code: couponVal?.ok ? couponVal.code : undefined,
     };
 
     try {
@@ -317,7 +348,7 @@ function ComprarContent() {
             )}
 
             {selected?.can_pay && (
-              <PayOptions
+              <ExistingRegForm
                 event={event}
                 category={category}
                 setCategory={setCategory}
@@ -333,7 +364,12 @@ function ComprarContent() {
                 payTotal={payTotal}
                 paying={paying}
                 payError={payError}
-                onPay={() => void startPayLogged()}
+                onPay={startPayLogged}
+                couponInput={couponInput}
+                setCouponInput={setCouponInput}
+                applyCoupon={applyCoupon}
+                applyingCoupon={applyingCoupon}
+                couponVal={couponVal}
               />
             )}
           </div>
@@ -398,13 +434,21 @@ function ComprarContent() {
               </select>
             </div>
 
+            <CouponSection
+              couponInput={couponInput}
+              setCouponInput={setCouponInput}
+              applyCoupon={applyCoupon}
+              applyingCoupon={applyingCoupon}
+              couponVal={couponVal}
+            />
+
             <PayMethodOnly
               payMethod={payMethod}
               setPayMethod={setPayMethod}
               acceptPix={acceptPix}
               acceptCard={acceptCard}
-              base={event.price_cents}
-              cardTotal={applyCardFeeCents(event.price_cents, cardFeePercent)}
+              base={base}
+              cardTotal={cardTotal}
               cardFeePercent={cardFeePercent}
             />
 
@@ -423,8 +467,8 @@ function ComprarContent() {
                 ? "Processando…"
                 : `Confirmar e pagar · ${formatBRL(
                     payMethod === "card"
-                      ? applyCardFeeCents(event.price_cents, cardFeePercent)
-                      : event.price_cents
+                      ? applyCardFeeCents(base, cardFeePercent)
+                      : base
                   )}`}
             </button>
 
@@ -441,7 +485,7 @@ function ComprarContent() {
   );
 }
 
-function PayOptions({
+function ExistingRegForm({
   event,
   category,
   setCategory,
@@ -458,6 +502,11 @@ function PayOptions({
   paying,
   payError,
   onPay,
+  couponInput,
+  setCouponInput,
+  applyCoupon,
+  applyingCoupon,
+  couponVal,
 }: {
   event: EventPublic;
   category: string;
@@ -475,6 +524,11 @@ function PayOptions({
   paying: boolean;
   payError: string | null;
   onPay: () => void;
+  couponInput: string;
+  setCouponInput: (v: string) => void;
+  applyCoupon: () => void;
+  applyingCoupon: boolean;
+  couponVal: { ok: boolean; error?: string; label?: string; code?: string; final_cents?: number } | null;
 }) {
   return (
     <div className="rounded-2xl border border-border bg-card p-5 space-y-4">
@@ -513,6 +567,14 @@ function PayOptions({
           ))}
         </select>
       </div>
+
+      <CouponSection
+        couponInput={couponInput}
+        setCouponInput={setCouponInput}
+        applyCoupon={applyCoupon}
+        applyingCoupon={applyingCoupon}
+        couponVal={couponVal}
+      />
 
       <PayMethodOnly
         payMethod={payMethod}
@@ -616,13 +678,55 @@ function Field({
         {label}
       </label>
       <input
-        id={name}
-        name={name}
         type={type}
+        name={name}
+        id={name}
         required={required}
         placeholder={placeholder}
         className="w-full rounded-xl border border-border bg-card-2 px-3 py-3 outline-none focus:ring-2 focus:ring-brand/40"
       />
+    </div>
+  );
+}
+
+function CouponSection({
+  couponInput,
+  setCouponInput,
+  applyCoupon,
+  applyingCoupon,
+  couponVal,
+}: {
+  couponInput: string;
+  setCouponInput: (v: string) => void;
+  applyCoupon: () => void;
+  applyingCoupon: boolean;
+  couponVal: { ok: boolean; error?: string; label?: string } | null;
+}) {
+  return (
+    <div>
+      <label className="block text-sm font-medium mb-1.5">Cupom de desconto</label>
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={couponInput}
+          onChange={(e) => setCouponInput(e.target.value)}
+          placeholder="Ex: PROMO10"
+          className="flex-1 rounded-xl border border-border bg-card-2 px-3 py-3 uppercase"
+        />
+        <button
+          type="button"
+          onClick={applyCoupon}
+          disabled={applyingCoupon || !couponInput}
+          className="rounded-xl bg-white/10 px-4 py-3 font-medium hover:bg-white/20 disabled:opacity-50"
+        >
+          Aplicar
+        </button>
+      </div>
+      {couponVal && (
+        <p className={`mt-2 text-sm ${couponVal.ok ? "text-green-400" : "text-red-400"}`}>
+          {couponVal.ok ? couponVal.label : couponVal.error}
+        </p>
+      )}
     </div>
   );
 }
