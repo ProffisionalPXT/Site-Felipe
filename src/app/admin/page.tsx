@@ -589,6 +589,7 @@ export default function AdminPage() {
   ];
 
   const tabTitle: Record<Tab, string> = {
+    layout: "Layout da Vitrine",
     resumo: "Resumo",
     evento: "Dados da corrida",
     visual: "Layout · fonte · cores",
