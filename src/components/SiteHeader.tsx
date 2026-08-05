@@ -7,23 +7,23 @@ export function SiteHeader({ solid = false }: { solid?: boolean }) {
   const pathname = usePathname() || "/";
 
   // Extract eventId from URL if we are inside an event
-  const match = pathname.match(/^\/evento\/([^\/]+)/);
+  const match = pathname.match(/^/evento/([^/]+)/);
   const eventId = match ? match[1] : null;
 
   const TABS = eventId ? [
-    { href: \`/evento/\${eventId}\`, label: "Evento", match: (p: string) => p === \`/evento/\${eventId}\` },
+    { href: `/evento/${eventId}`, label: "Evento", match: (p: string) => p === `/evento/${eventId}` },
     {
-      href: \`/evento/\${eventId}/inscrever\`,
+      href: `/evento/${eventId}/inscrever`,
       label: "Inscrição",
-      match: (p: string) => p.startsWith(\`/evento/\${eventId}/inscrever\`),
+      match: (p: string) => p.startsWith(`/evento/${eventId}/inscrever`),
     },
     {
-      href: \`/evento/\${eventId}/atleta\`,
+      href: `/evento/${eventId}/atleta`,
       label: "Meu ingresso",
       match: (p: string) =>
-        p.startsWith(\`/evento/\${eventId}/atleta\`) ||
-        p.startsWith(\`/evento/\${eventId}/comprar\`) ||
-        p.startsWith(\`/evento/\${eventId}/confirmacao\`),
+        p.startsWith(`/evento/${eventId}/atleta`) ||
+        p.startsWith(`/evento/${eventId}/comprar`) ||
+        p.startsWith(`/evento/${eventId}/confirmacao`),
     },
   ] : [
     { href: "/", label: "Início", match: (p: string) => p === "/" },
