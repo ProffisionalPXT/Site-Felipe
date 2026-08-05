@@ -217,6 +217,7 @@ export default function AdminPage() {
         status?: string;
         category?: string;
         shirt?: string;
+        eventId?: string;
       }
     ) => {
       setLoading(true);
@@ -232,7 +233,7 @@ export default function AdminPage() {
         if (cat && cat !== "all") params.set("category", cat);
         if (sh && sh !== "all") params.set("shirt", sh);
         
-        let targetEventId = selectedEventId;
+        let targetEventId = opts?.eventId !== undefined ? opts.eventId : selectedEventId;
         const evListRes = await fetch("/api/event", { cache: "no-store" });
         const evListData = await evListRes.json();
         const availableEvents = evListData.events || [];
@@ -798,12 +799,13 @@ export default function AdminPage() {
                 </button>
                 <div className="min-w-0">
                   <h1 className="text-xl md:text-2xl font-bold text-white truncate flex items-center gap-2">
-                    <select
-                      value={selectedEventId}
-                      onChange={(e) => {
-                        setSelectedEventId(e.target.value);
-                        setTimeout(() => loadAll(password, { status: filterStatus, category: filterCategory, shirt: filterShirt, q }), 0);
-                      }}
+                      <select
+                        value={selectedEventId}
+                        onChange={(e) => {
+                          const newId = e.target.value;
+                          setSelectedEventId(newId);
+                          setTimeout(() => loadAll(password, { status: filterStatus, category: filterCategory, shirt: filterShirt, q, eventId: newId }), 0);
+                        }}
                       className="bg-transparent border-none outline-none focus:ring-0 text-xl md:text-2xl font-bold p-0 cursor-pointer text-white appearance-none"
                     >
                       {events.map(ev => (
