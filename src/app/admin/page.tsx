@@ -893,7 +893,7 @@ export default function AdminPage() {
                 </div>
               )}
 
-              {activeTab === "layout" && <AdminLayoutTab onMessage={(m, e) => { setMsg(m); setError(e); if(m && !e) showSuccess(m, null); }} />}
+              {activeTab === "layout" && <AdminLayoutTab onMessage={(m, e) => { setMsg(m); setError(e); if(m && !e) showSuccess(m, ""); }} />}
               {activeTab === "resumo" && stats && event && (
                 <div className="space-y-5">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
