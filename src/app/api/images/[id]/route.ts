@@ -9,6 +9,27 @@ type Ctx = { params: Promise<{ id: string }> };
 
 /** DELETE remove foto. PATCH ?action=cover define como capa. */
 export async function DELETE(req: NextRequest, ctx: Ctx) {
+  if (require('@/lib/demo-data').isDemoMode()) {
+    const { id } = await ctx.params;
+    const { getDemoEvent, setDemoEvent } = require('@/lib/demo-data');
+    const ev = getDemoEvent();
+    if (ev) {
+      const images = ev.images || [];
+      const image = images.find((i: any) => i.id === id);
+      if (image) {
+        const nextImages = images.filter((i: any) => i.id !== id);
+        let coverUrl = ev.cover_image_url;
+        if (coverUrl === image.url || image.is_cover) {
+          coverUrl = nextImages.length > 0 ? nextImages[0].url : null;
+          if (nextImages.length > 0) nextImages[0].is_cover = true;
+        }
+        const nextEvent = { ...ev, images: nextImages, cover_image_url: coverUrl };
+        setDemoEvent(nextEvent);
+        return NextResponse.json({ ok: true, event: nextEvent });
+      }
+    }
+    return NextResponse.json({ error: "Imagem não encontrada na demo." }, { status: 404 });
+  }
   if (!isSupabaseConfigured()) {
     return NextResponse.json({ error: "Supabase não configurado." }, { status: 503 });
   }
@@ -75,6 +96,26 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
 }
 
 export async function PATCH(req: NextRequest, ctx: Ctx) {
+  if (require('@/lib/demo-data').isDemoMode()) {
+    const { id } = await ctx.params;
+    const { getDemoEvent, setDemoEvent } = require('@/lib/demo-data');
+    const ev = getDemoEvent();
+    let body: any = {};
+    try { body = await req.json(); } catch {}
+    if (body.action !== "set_cover") return NextResponse.json({ error: "Ação inválida." }, { status: 400 });
+    
+    if (ev) {
+      const images = ev.images || [];
+      const image = images.find((i: any) => i.id === id);
+      if (image) {
+        const nextImages = images.map((i: any) => ({ ...i, is_cover: i.id === id }));
+        const nextEvent = { ...ev, images: nextImages, cover_image_url: image.url };
+        setDemoEvent(nextEvent);
+        return NextResponse.json({ ok: true, event: nextEvent });
+      }
+    }
+    return NextResponse.json({ error: "Imagem não encontrada na demo." }, { status: 404 });
+  }
   if (!isSupabaseConfigured()) {
     return NextResponse.json({ error: "Supabase não configurado." }, { status: 503 });
   }

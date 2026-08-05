@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       configured: true,
       demo: true,
-      event: getDemoEvent(req.nextUrl.searchParams.get("eventId") || undefined),
+      event: getDemoEvent(req.nextUrl.searchParams.get("id") || req.nextUrl.searchParams.get("eventId") || undefined),
       events: getDemoEvents(),
       payment,
     });

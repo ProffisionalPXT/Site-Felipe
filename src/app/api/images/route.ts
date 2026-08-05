@@ -52,17 +52,28 @@ export async function POST(req: NextRequest) {
   if (isDemoMode()) {
     const { getDemoEvent, setDemoEvent } = require('@/lib/demo-data');
     const ev = getDemoEvent();
+    
+    // Ler o arquivo e converter para base64
+    const formData = await req.formData().catch(() => null);
+    const file = formData ? formData.get("file") as Blob | null : null;
+    let url = `https://picsum.photos/1200/800?random=${Date.now()}`;
+    
+    if (file) {
+      const buffer = Buffer.from(await file.arrayBuffer());
+      url = `data:${file.type};base64,${buffer.toString("base64")}`;
+    }
+    
     const mockImage = {
       id: crypto.randomUUID(),
       event_id: ev?.id || "demo",
-      url: `https://picsum.photos/1200/800?random=${Date.now()}`,
+      url,
       storage_path: "demo/mock.jpg",
       caption: "Foto adicionada",
       sort_order: (ev?.images || []).length,
       is_cover: false,
       created_at: new Date().toISOString()
     };
-    const nextEvent = { ...ev, images: [...(ev?.images || []), mockImage] };
+    const nextEvent = { ...ev, images: [...(ev?.images || []), mockImage] } as any;
     if (ev) setDemoEvent(nextEvent);
     return NextResponse.json({ ok: true, demo: true, image: mockImage, event: nextEvent });
   }
