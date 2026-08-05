@@ -1361,13 +1361,25 @@ export default function AdminPage() {
           </div>
         </div>
 
-                  <button
-                    type="submit"
-                    disabled={saving}
-                    className="w-full sm:w-auto rounded-xl bg-brand px-8 py-3 font-bold text-white hover:bg-brand-dark disabled:opacity-60"
-                  >
-                    {saving ? "Salvando…" : "Salvar e atualizar o site"}
-                  </button>
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <button
+                      type="submit"
+                      disabled={saving}
+                      className="w-full sm:w-auto rounded-xl bg-brand px-8 py-3 font-bold text-white hover:bg-brand-dark disabled:opacity-60"
+                    >
+                      {saving ? "Salvando…" : "Salvar e atualizar o site"}
+                    </button>
+                    {selectedEventId && (
+                      <button
+                        type="button"
+                        onClick={deleteEvent}
+                        disabled={saving}
+                        className="w-full sm:w-auto rounded-xl bg-red-500/10 border border-red-500/20 px-8 py-3 font-bold text-red-500 hover:bg-red-500/20 disabled:opacity-60 transition"
+                      >
+                        Excluir Evento
+                      </button>
+                    )}
+                  </div>
                 </form>
                 
                 <div className="mt-8 space-y-8 pb-12 border-t border-white/10 pt-8">
