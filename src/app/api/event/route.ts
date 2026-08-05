@@ -69,6 +69,7 @@ const updateSchema = z.object({
   categories: z.array(z.string()).min(1).max(40),
   shirt_sizes: z.array(z.string()).min(1).max(20),
   cover_image_url: z.string().nullable().optional(),
+  cover_position_y: z.coerce.number().min(0).max(100).optional().default(50),
   // Aceita IDs antigos e novos; normaliza com resolveLayout/resolveFont
   theme_layout: z.string().optional(),
   theme_font: z.string().optional(),
@@ -173,9 +174,10 @@ export async function PUT(req: NextRequest) {
       theme_color,
       ...contacts,
       cover_image_url:
-        body.cover_image_url === undefined
-          ? current.cover_image_url
-          : body.cover_image_url,
+          body.cover_image_url === undefined
+            ? current.cover_image_url
+            : body.cover_image_url,
+        cover_position_y: body.cover_position_y,
       slots_remaining: Math.max(
         0,
         body.max_slots - current.paid_count - current.pending_count
@@ -226,6 +228,7 @@ export async function PUT(req: NextRequest) {
           body.cover_image_url === undefined
             ? current.cover_image_url
             : body.cover_image_url,
+        cover_position_y: body.cover_position_y,
         updated_at: new Date().toISOString(),
       })
       .eq("id", current.id)

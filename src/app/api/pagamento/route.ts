@@ -65,7 +65,9 @@ export async function POST(req: NextRequest) {
   }
 
   const token = await getMercadoPagoAccessToken(eventId);
-  if (!token) {
+  const payPub = await getPaymentSettingsPublic(eventId);
+
+  if (!token && payPub.mode !== "manual_pix") {
     return NextResponse.json(
       {
         error:
@@ -86,7 +88,6 @@ export async function POST(req: NextRequest) {
     }
 
     // Valor: base da inscrição; cartão pode incluir taxa
-    const payPub = await getPaymentSettingsPublic(eventId);
     let amountCents = Number(registration.amount_cents) || 0;
     // amount_cents na inscrição é o preço base (sem taxa); aplica taxa no cartão
     if (method === "card" && payPub.card_fee_percent > 0) {
@@ -95,6 +96,17 @@ export async function POST(req: NextRequest) {
         payPub.card_fee_percent
       );
       amountCents = withFee;
+    }
+
+    if (payPub.mode === "manual_pix" || !token) {
+      return NextResponse.json({
+        manual: true,
+        payment_method: method,
+        amount_cents: amountCents,
+        pix_key: payPub.pix_key,
+        pix_key_type: payPub.pix_key_type,
+        receiver_name: payPub.receiver_name,
+      });
     }
 
     await supabase

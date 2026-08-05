@@ -13,6 +13,7 @@ export type EventRow = {
   max_slots: number;
   registration_open: boolean;
   cover_image_url: string | null;
+  cover_position_y: number;
   categories: string[];
   shirt_sizes: string[];
   /** Visual da home */

@@ -10,12 +10,14 @@ const MAX_BYTES = 5 * 1024 * 1024;
 const ALLOWED = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 
 /** Lista fotos do evento (público). */
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const eventId = req.nextUrl.searchParams.get("eventId");
   if (isDemoMode()) {
     const base =
       process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
     try {
-      const res = await fetch(`${base}/api/event`, { cache: "no-store" });
+      const qs = eventId ? `?id=${eventId}` : "";
+      const res = await fetch(`${base}/api/event${qs}`, { cache: "no-store" });
       const data = await res.json();
       return NextResponse.json({
         demo: true,
@@ -31,7 +33,8 @@ export async function GET() {
     return NextResponse.json({ error: "Supabase não configurado." }, { status: 503 });
   }
   try {
-    const event = await getActiveEvent();
+    const { getEventById } = await import("@/lib/event");
+    const event = eventId ? await getEventById(eventId) : await getActiveEvent();
     if (!event) {
       return NextResponse.json({ error: "Evento não encontrado." }, { status: 404 });
     }
@@ -44,6 +47,7 @@ export async function GET() {
 
 /** Upload de foto (admin). FormData: file + opcional caption */
 export async function POST(req: NextRequest) {
+  const eventId = req.nextUrl.searchParams.get("eventId");
   const password = req.headers.get("x-admin-password");
   if (!checkAdminPassword(password)) {
     return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
@@ -51,7 +55,7 @@ export async function POST(req: NextRequest) {
 
   if (isDemoMode()) {
     const { getDemoEvent, setDemoEvent } = require('@/lib/demo-data');
-    const ev = getDemoEvent();
+    const ev = getDemoEvent(eventId);
     
     // Ler o arquivo e converter para base64
     const formData = await req.formData().catch(() => null);
@@ -83,7 +87,8 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const event = await getActiveEvent();
+    const { getEventById } = await import("@/lib/event");
+    const event = eventId ? await getEventById(eventId) : await getActiveEvent();
     if (!event) {
       return NextResponse.json({ error: "Evento não encontrado." }, { status: 404 });
     }

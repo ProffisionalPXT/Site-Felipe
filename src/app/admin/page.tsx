@@ -481,7 +481,7 @@ export default function AdminPage() {
         const fd = new FormData();
         fd.append("file", file);
         if (!event?.images.length) fd.append("set_cover", "1");
-        const res = await fetch("/api/images", {
+        const res = await fetch(`/api/images?eventId=${event?.id || ""}`, {
           method: "POST",
           headers: { "x-admin-password": password },
           body: fd,

@@ -31,6 +31,8 @@ export type PaymentSettingsPublic = {
   receiver_name: string;
   /** Só em modo manual_pix e se houver chave */
   has_manual_pix: boolean;
+  pix_key?: string;
+  pix_key_type?: string;
   /** % de taxa no cartão (0 = sem taxa extra) */
   card_fee_percent: number;
 };
@@ -195,7 +197,7 @@ export async function getPaymentSettingsPublic(eventId?: string): Promise<Paymen
         const { data } = await supabase
           .from("events")
           .select(
-            "mp_access_token, pix_key, accept_pix, accept_card, payment_mode, receiver_name, card_fee_percent"
+            "mp_access_token, pix_key, accept_pix, accept_card, payment_mode, receiver_name, card_fee_percent, pix_key_type"
           )
           .eq("id", event.id)
           .single();
@@ -212,6 +214,8 @@ export async function getPaymentSettingsPublic(eventId?: string): Promise<Paymen
             accept_card: data.accept_card !== false,
             receiver_name: String(data.receiver_name || ""),
             has_manual_pix: Boolean(pixKey),
+            pix_key: pixKey,
+            pix_key_type: String(data.pix_key_type || ""),
             card_fee_percent: cardFee,
           };
         }
@@ -227,6 +231,8 @@ export async function getPaymentSettingsPublic(eventId?: string): Promise<Paymen
     accept_card: admin.accept_card,
     receiver_name: admin.receiver_name,
     has_manual_pix: Boolean(pixKey),
+    pix_key: pixKey,
+    pix_key_type: admin.pix_key_type,
     card_fee_percent: cardFee,
   };
 }

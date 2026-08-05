@@ -15,6 +15,7 @@ function normalizeEvent(row: Record<string, unknown>): EventRow {
     max_slots: Number(row.max_slots ?? 0),
     registration_open: Boolean(row.registration_open),
     cover_image_url: (row.cover_image_url as string | null) ?? null,
+      cover_position_y: Number(row.cover_position_y ?? 50),
     categories: asStringArray(row.categories, ["Geral"]),
     shirt_sizes: asStringArray(row.shirt_sizes, ["P", "M", "G"]),
     theme_layout: String(row.theme_layout ?? "bilheteria"),

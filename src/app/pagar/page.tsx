@@ -32,13 +32,11 @@ function Content() {
   const [paying, setPaying] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  // Código Pix fictício só para demonstração visual
-  const demoPixCode =
-    "00020126580014BR.GOV.BCB.PIX0136123e4567-e12b-12d1-a456-426655440000520400005303986540" +
-    (price / 100).toFixed(2) +
-    "5802BR5925CORRIDANOTURNA DEMO6009SAO PAULO62070503***6304ABCD";
+  const [pixKey, setPixKey] = useState("");
+  const [pixKeyType, setPixKeyType] = useState("");
 
   useEffect(() => {
+    // 1. Fetch event info for the name/price
     fetch("/api/event")
       .then((r) => r.json())
       .then((d) => {
@@ -49,10 +47,31 @@ function Content() {
         }
       })
       .catch(() => {});
-  }, [amountParam, originalParam]);
+
+    // 2. Fetch payment info / generate checkout
+    if (id) {
+      fetch("/api/pagamento", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ registration_id: id, payment_method: method }),
+      })
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.pix_key) {
+            setPixKey(d.pix_key);
+            setPixKeyType(d.pix_key_type);
+          }
+          if (d.init_point && method === "card") {
+            // For cards, we could auto redirect. But let's leave it manual for now
+            // window.location.href = d.init_point;
+          }
+        })
+        .catch(() => {});
+    }
+  }, [amountParam, originalParam, id, method]);
 
   function copyPix() {
-    void navigator.clipboard.writeText(demoPixCode);
+    void navigator.clipboard.writeText(pixKey || "");
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
@@ -60,12 +79,12 @@ function Content() {
   function confirmPaid(e?: FormEvent) {
     e?.preventDefault();
     setPaying(true);
-    // Demo: simula processamento e confirma
+    // Para pix manual, a inscrição fica pendente para o admin aprovar
     setTimeout(() => {
       router.push(
-        `/confirmacao?id=${encodeURIComponent(id)}&status=success&method=${method}`
+        `/confirmacao?id=${encodeURIComponent(id)}&status=pending&method=${method}`
       );
-    }, 1200);
+    }, 800);
   }
 
   return (
@@ -130,9 +149,9 @@ function Content() {
           </p>
 
           <div className="rounded-xl bg-card-2 border border-border p-3">
-            <p className="text-[10px] text-muted mb-1">Pix Copia e Cola</p>
+            <p className="text-[10px] text-muted mb-1">Pix Copia e Cola ({pixKeyType})</p>
             <p className="text-[11px] font-mono break-all text-slate-300 leading-relaxed max-h-16 overflow-hidden">
-              {demoPixCode}
+              {pixKey || "Chave Pix não configurada pelo organizador."}
             </p>
           </div>
 
