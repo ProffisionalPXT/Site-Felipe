@@ -25,10 +25,14 @@ export default function HomePage() {
         // Se houver apenas 1 evento, redireciona automaticamente para ele
         if (evs.length === 1) {
           router.push(`/evento/${evs[0].id}`);
+        } else {
+          setLoading(false);
         }
       })
-      .catch((e: Error) => setError(e.message))
-      .finally(() => setLoading(false));
+      .catch((e: Error) => {
+        setError(e.message);
+        setLoading(false);
+      });
   }, []);
 
   return (
