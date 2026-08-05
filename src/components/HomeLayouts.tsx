@@ -436,17 +436,11 @@ function LayoutNeon(p: Props) {
               </span>
             ))}
           </div>
-          <div className="mt-10 grid grid-cols-3 gap-3 w-full max-w-lg">
+          <div className="mt-10 grid grid-cols-2 gap-3 w-full max-w-lg">
             <div className="rounded-2xl border border-white/15 bg-black/40 px-3 py-4 backdrop-blur">
               <p className="text-[10px] uppercase text-slate-400">Vagas</p>
               <p className="text-2xl font-black text-white tabular-nums">
                 {event.slots_remaining}
-              </p>
-            </div>
-            <div className="rounded-2xl border border-white/15 bg-black/40 px-3 py-4 backdrop-blur">
-              <p className="text-[10px] uppercase text-slate-400">Pagos</p>
-              <p className="text-2xl font-black text-white tabular-nums">
-                {event.paid_count}
               </p>
             </div>
             <div className="rounded-2xl border border-white/15 bg-black/40 px-3 py-4 backdrop-blur">
