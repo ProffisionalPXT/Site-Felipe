@@ -5,7 +5,7 @@ import type { EventPublic } from "@/lib/types";
 
 export function HomeLayoutGlass({ events }: { events: EventPublic[] }) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 relative z-10">
+    <div className="flex flex-wrap justify-center gap-6 relative z-10 w-full mx-auto max-w-7xl">
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-[500px] bg-[#007BFF]/10 blur-[120px] rounded-full -z-10 pointer-events-none" />
       {events.map((ev) => {
         const isClosed = !ev.registration_open || ev.slots_remaining <= 0;
@@ -14,9 +14,9 @@ export function HomeLayoutGlass({ events }: { events: EventPublic[] }) {
           <Link
             key={ev.id}
             href={`/evento/${ev.id}`}
-            className="group relative flex flex-col overflow-hidden rounded-[32px] border border-white/10 bg-white/5 backdrop-blur-xl transition-all hover:bg-white/10 hover:border-[#007BFF]/50 hover:shadow-[0_0_30px_rgba(0,123,255,0.2)] h-[480px] w-full"
+            className="group relative flex flex-col overflow-hidden rounded-[32px] border border-white/10 bg-white/5 backdrop-blur-xl transition-all hover:bg-white/10 hover:border-[#007BFF]/50 hover:shadow-[0_0_30px_rgba(0,123,255,0.2)] w-full max-w-[360px] min-h-[480px]"
           >
-            <div className="h-[220px] w-full relative overflow-hidden rounded-t-[32px]">
+            <div className="h-[220px] w-full relative overflow-hidden rounded-t-[32px] shrink-0">
               {ev.cover_image_url ? (
                 <img src={ev.cover_image_url} alt={ev.name} className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-110" />
               ) : (
