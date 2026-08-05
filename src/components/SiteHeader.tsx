@@ -12,16 +12,16 @@ export function SiteHeader({ solid = false }: { solid?: boolean }) {
   const TABS = eventId ? [
     { href: `/evento/${eventId}`, label: "Evento", match: (p: string) => p === `/evento/${eventId}` },
     {
-      href: `/evento/${eventId}/inscrever`,
+      href: `/evento/${eventId}/comprar`,
       label: "Inscrição",
-      match: (p: string) => p.startsWith(`/evento/${eventId}/inscrever`),
+      match: (p: string) => p.startsWith(`/evento/${eventId}/comprar`) && !p.endsWith("/atleta"),
     },
     {
       href: `/evento/${eventId}/atleta`,
       label: "Meu ingresso",
       match: (p: string) =>
         p.startsWith(`/evento/${eventId}/atleta`) ||
-        p.startsWith(`/evento/${eventId}/comprar`) ||
+        
         p.startsWith(`/evento/${eventId}/confirmacao`),
     },
   ] : [

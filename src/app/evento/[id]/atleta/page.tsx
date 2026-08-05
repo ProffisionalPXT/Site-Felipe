@@ -90,7 +90,7 @@ export default function AtletaPage() {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     const cpf = String(fd.get("cpf") || "");
-    const password = cpf.replace(/\D/g, "");
+    const password = String(fd.get("password") || "");
     void doLogin(cpf, password);
   }
 
@@ -136,6 +136,17 @@ export default function AtletaPage() {
                 className="mt-1.5 w-full rounded-xl border border-border bg-card-2 px-3 py-3 outline-none focus:ring-2 focus:ring-brand/40"
               />
             </label>
+            <label className="block mt-4">
+              <span className="text-sm font-medium">Senha</span>
+              <input
+                name="password"
+                type="password"
+                required
+                placeholder="Use seu CPF (apenas números)"
+                className="mt-1.5 w-full rounded-xl border border-border bg-card-2 px-3 py-3 outline-none focus:ring-2 focus:ring-brand/40"
+              />
+            </label>
+
 
             {error && (
               <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">
@@ -151,7 +162,7 @@ export default function AtletaPage() {
             </button>
             <p className="text-center text-xs text-muted">
               Ainda não tem inscrição?{" "}
-              <Link href={`/evento/${eventId}/inscrever`} className="text-brand-soft underline">
+              <Link href={`/evento/${eventId}/comprar`} className="text-brand-soft underline">
                 Fazer inscrição
               </Link>
             </p>
@@ -184,7 +195,7 @@ export default function AtletaPage() {
             {regs.length === 0 && (
               <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-5 text-sm">
                 Nenhuma inscrição.{" "}
-                <Link href={`/evento/${eventId}/inscrever`} className="underline text-brand-soft">
+                <Link href={`/evento/${eventId}/comprar`} className="underline text-brand-soft">
                   Inscrever-se
                 </Link>
               </div>
