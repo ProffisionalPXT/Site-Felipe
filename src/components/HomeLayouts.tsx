@@ -32,44 +32,44 @@ export function TicketCard({
     <aside
       className={
         light
-          ? "rounded-3xl border border-border bg-card p-6 shadow-xl"
+          ? "rounded-3xl border border-white/10 bg-white/5 border-white/10 p-6 shadow-xl"
           : "rounded-3xl border border-white/10 bg-black/55 backdrop-blur-xl p-6 shadow-2xl shadow-black/40"
       }
     >
-      <p className="text-xs uppercase tracking-wider text-muted font-semibold">
+      <p className="text-xs uppercase tracking-wider text-slate-400 font-semibold">
         Ingresso
       </p>
       <p
         className={
           light
-            ? "mt-1 text-4xl font-black text-foreground tabular-nums"
+            ? "mt-1 text-4xl font-black text-white tabular-nums"
             : "mt-1 text-4xl font-black text-white tabular-nums"
         }
       >
         {formatBRL(event.price_cents)}
       </p>
-      <p className="mt-1 text-sm text-muted">por atleta</p>
+      <p className="mt-1 text-sm text-slate-400">por atleta</p>
 
       <div className={`mt-5 grid grid-cols-2 gap-3 ${compact ? "text-sm" : ""}`}>
-        <div className="rounded-2xl bg-card-2/80 border border-border px-3 py-3">
-          <p className="text-[11px] text-muted uppercase">Vagas</p>
+        <div className="rounded-2xl bg-white/5 border-white/10-2/80 border border-white/10 px-3 py-3">
+          <p className="text-[11px] text-slate-400 uppercase">Vagas</p>
           <p className="text-xl font-bold tabular-nums">
             {event.slots_remaining}
-            <span className="text-sm font-normal text-muted">
+            <span className="text-sm font-normal text-slate-400">
               {" "}
               / {event.max_slots}
             </span>
           </p>
         </div>
-        <div className="rounded-2xl bg-card-2/80 border border-border px-3 py-3">
-          <p className="text-[11px] text-muted uppercase">Confirmados</p>
+        <div className="rounded-2xl bg-white/5 border-white/10-2/80 border border-white/10 px-3 py-3">
+          <p className="text-[11px] text-slate-400 uppercase">Confirmados</p>
           <p className="text-xl font-bold tabular-nums">{event.paid_count}</p>
         </div>
       </div>
 
       {event.categories.length > 0 && (
         <div className="mt-4">
-          <p className="text-[11px] text-muted uppercase mb-2">Categorias</p>
+          <p className="text-[11px] text-slate-400 uppercase mb-2">Categorias</p>
           <div className="flex flex-wrap gap-1.5">
             {event.categories.map((c) => (
               <span
@@ -86,12 +86,12 @@ export function TicketCard({
       {canBuy ? (
         <Link
           href="/comprar"
-          className="mt-6 flex w-full items-center justify-center rounded-2xl bg-brand py-3.5 text-base font-bold text-white hover:bg-brand-dark transition"
+          className="mt-6 flex w-full items-center justify-center rounded-2xl bg-[#007BFF] hover:bg-[#0056B3] py-3.5 text-base font-bold text-white hover:bg-[#007BFF] hover:bg-[#0056B3]-dark transition"
         >
           Comprar ingresso
         </Link>
       ) : (
-        <p className="mt-6 rounded-2xl bg-white/5 border border-border py-3 text-center text-sm text-muted">
+        <p className="mt-6 rounded-2xl bg-white/5 border border-white/10 py-3 text-center text-sm text-slate-400">
           Inscrições indisponíveis
         </p>
       )}
@@ -106,7 +106,7 @@ function MetaLine({
   event: EventPublic;
   light?: boolean;
 }) {
-  const t = light ? "text-muted" : "text-white/80";
+  const t = light ? "text-slate-400" : "text-white/80";
   return (
     <ul className={`flex flex-wrap gap-x-6 gap-y-2 text-sm ${t}`}>
       <li className="flex items-center gap-2">
@@ -159,7 +159,7 @@ function GalleryStrip({
           key={img.id}
           type="button"
           onClick={() => onOpenPhoto(img.url)}
-          className={`relative ${tall ? "h-56 w-80" : "h-44 w-72"} shrink-0 overflow-hidden rounded-2xl border border-border group`}
+          className={`relative ${tall ? "h-56 w-80" : "h-44 w-72"} shrink-0 overflow-hidden rounded-2xl border border-white/10 group`}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -196,7 +196,7 @@ function GalleryGrid({
           key={img.id}
           type="button"
           onClick={() => onOpenPhoto(img.url)}
-          className="relative aspect-[4/3] overflow-hidden rounded-2xl border border-border group"
+          className="relative aspect-[4/3] overflow-hidden rounded-2xl border border-white/10 group"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -213,7 +213,7 @@ function GalleryGrid({
 function Badges({ canBuy }: { canBuy: boolean }) {
   return (
     <div className="mb-3 flex flex-wrap gap-2">
-      <span className="rounded-full bg-brand px-3 py-1 text-xs font-bold uppercase tracking-wide text-white">
+      <span className="rounded-full bg-[#007BFF] hover:bg-[#0056B3] px-3 py-1 text-xs font-bold uppercase tracking-wide text-white">
         Ingresso oficial
       </span>
       {canBuy ? (
@@ -391,7 +391,7 @@ function LayoutRevista(p: Props) {
           {canBuy && (
             <Link
               href="/comprar"
-              className="inline-flex justify-center rounded-xl bg-brand px-6 py-2.5 text-sm font-bold text-white hover:bg-brand-dark"
+              className="inline-flex justify-center rounded-xl bg-[#007BFF] hover:bg-[#0056B3] px-6 py-2.5 text-sm font-bold text-white hover:bg-[#007BFF] hover:bg-[#0056B3]-dark"
             >
               Inscreva-se · {formatBRL(event.price_cents)}
             </Link>
@@ -430,7 +430,7 @@ function LayoutNeon(p: Props) {
             {event.categories.map((c) => (
               <span
                 key={c}
-                className="rounded-full border border-brand/50 bg-brand/15 px-4 py-1.5 text-sm font-bold text-brand-soft"
+                className="rounded-full border border-brand/50 bg-[#007BFF] hover:bg-[#0056B3]/15 px-4 py-1.5 text-sm font-bold text-brand-soft"
               >
                 {c}
               </span>
@@ -438,19 +438,19 @@ function LayoutNeon(p: Props) {
           </div>
           <div className="mt-10 grid grid-cols-3 gap-3 w-full max-w-lg">
             <div className="rounded-2xl border border-white/15 bg-black/40 px-3 py-4 backdrop-blur">
-              <p className="text-[10px] uppercase text-muted">Vagas</p>
+              <p className="text-[10px] uppercase text-slate-400">Vagas</p>
               <p className="text-2xl font-black text-white tabular-nums">
                 {event.slots_remaining}
               </p>
             </div>
             <div className="rounded-2xl border border-white/15 bg-black/40 px-3 py-4 backdrop-blur">
-              <p className="text-[10px] uppercase text-muted">Pagos</p>
+              <p className="text-[10px] uppercase text-slate-400">Pagos</p>
               <p className="text-2xl font-black text-white tabular-nums">
                 {event.paid_count}
               </p>
             </div>
             <div className="rounded-2xl border border-white/15 bg-black/40 px-3 py-4 backdrop-blur">
-              <p className="text-[10px] uppercase text-muted">Preço</p>
+              <p className="text-[10px] uppercase text-slate-400">Preço</p>
               <p className="text-lg font-black text-brand-soft">
                 {formatBRL(event.price_cents)}
               </p>
@@ -459,7 +459,7 @@ function LayoutNeon(p: Props) {
           {canBuy && (
             <Link
               href="/comprar"
-              className="mt-8 rounded-full bg-brand px-10 py-4 text-lg font-black text-white shadow-[0_0_40px_var(--brand)] hover:bg-brand-dark"
+              className="mt-8 rounded-full bg-[#007BFF] hover:bg-[#0056B3] px-10 py-4 text-lg font-black text-white shadow-[0_0_40px_var(--brand)] hover:bg-[#007BFF] hover:bg-[#0056B3]-dark"
             >
               Garantir vaga
             </Link>
@@ -492,12 +492,12 @@ function LayoutSplit(p: Props) {
             <p className="text-white font-bold text-lg mt-1">{event.location}</p>
           </div>
         </div>
-        <div className="flex flex-col justify-center px-6 md:px-12 py-16 bg-background">
+        <div className="flex flex-col justify-center px-6 md:px-12 py-16 bg-[#020813]">
           <Badges canBuy={canBuy} />
-          <h1 className="font-display text-4xl md:text-5xl font-black tracking-tight text-foreground">
+          <h1 className="font-display text-4xl md:text-5xl font-black tracking-tight text-white">
             {event.name}
           </h1>
-          <p className="mt-4 text-muted leading-relaxed">{event.description}</p>
+          <p className="mt-4 text-slate-400 leading-relaxed">{event.description}</p>
           <div className="mt-6">
             <MetaLine event={event} light />
           </div>
@@ -548,7 +548,7 @@ function LayoutStadium(p: Props) {
           {canBuy && (
             <Link
               href="/comprar"
-              className="mt-10 inline-flex rounded-2xl bg-brand px-12 py-4 text-lg font-bold text-white hover:bg-brand-dark shadow-xl"
+              className="mt-10 inline-flex rounded-2xl bg-[#007BFF] hover:bg-[#0056B3] px-12 py-4 text-lg font-bold text-white hover:bg-[#007BFF] hover:bg-[#0056B3]-dark shadow-xl"
             >
               Comprar · {formatBRL(event.price_cents)}
             </Link>
@@ -584,14 +584,14 @@ function LayoutMagazine(p: Props) {
             </p>
           </div>
         </div>
-        <div className="flex flex-col justify-center px-6 md:px-10 py-12 bg-card border-l border-border">
+        <div className="flex flex-col justify-center px-6 md:px-10 py-12 bg-white/5 border-white/10 border-l border-white/10">
           <p className="text-xs uppercase tracking-widest text-brand font-bold mb-3">
             Ingresso oficial
           </p>
           <h1 className="font-display text-4xl md:text-5xl font-black leading-tight">
             {event.name}
           </h1>
-          <p className="mt-5 text-muted leading-relaxed text-sm md:text-base whitespace-pre-line">
+          <p className="mt-5 text-slate-400 leading-relaxed text-sm md:text-base whitespace-pre-line">
             {event.description}
           </p>
           <div className="mt-6">
@@ -620,7 +620,7 @@ function LayoutVitrine(p: Props) {
   return (
     <>
       {event.images.length > 0 && (
-        <section className="border-b border-border bg-black/20 py-4 pt-20">
+        <section className="border-b border-white/10 bg-black/20 py-4 pt-20">
           <div className="mx-auto max-w-6xl px-4">
             <GalleryStrip event={event} onOpenPhoto={onOpenPhoto} tall />
           </div>

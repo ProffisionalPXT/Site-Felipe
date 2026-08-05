@@ -67,7 +67,7 @@ export default function EventPage() {
 
   return (
     <div
-      className="home-theme min-h-full flex flex-col bg-background text-foreground"
+      className="home-theme min-h-full flex flex-col bg-[#020813] text-white"
       data-layout={layout}
       data-font={font}
       data-color={color}
@@ -80,7 +80,7 @@ export default function EventPage() {
       {loading && (
         <>
           <SiteHeader solid />
-          <p className="text-muted text-center py-32">Carregando evento…</p>
+          <p className="text-slate-400 text-center py-32">Carregando evento…</p>
         </>
       )}
 
@@ -109,24 +109,24 @@ export default function EventPage() {
 
           {/* Sobre + regulamento (comum a todos) */}
           <section className="mx-auto w-full max-w-6xl px-4 py-10 grid gap-6 md:grid-cols-2">
-            <div className="rounded-3xl border border-border bg-card p-6 md:p-8">
+            <div className="rounded-3xl border border-white/10 bg-white/5 border-white/10 shadow-[0_0_20px_rgba(0,123,255,0.05)] p-6 md:p-8">
               <h2 className="text-xl font-bold mb-3">Sobre o evento</h2>
-              <p className="text-muted leading-relaxed whitespace-pre-line text-sm md:text-base">
+              <p className="text-slate-400 leading-relaxed whitespace-pre-line text-sm md:text-base">
                 {event.description || "Informações em breve."}
               </p>
               <dl className="mt-6 space-y-3 text-sm">
-                <div className="flex justify-between gap-4 border-b border-border pb-2">
-                  <dt className="text-muted">Data</dt>
+                <div className="flex justify-between gap-4 border-b border-white/10 pb-2">
+                  <dt className="text-slate-400">Data</dt>
                   <dd className="font-medium capitalize text-right">
                     {formatDateLongBR(event.event_date)}
                   </dd>
                 </div>
-                <div className="flex justify-between gap-4 border-b border-border pb-2">
-                  <dt className="text-muted">Horário</dt>
+                <div className="flex justify-between gap-4 border-b border-white/10 pb-2">
+                  <dt className="text-slate-400">Horário</dt>
                   <dd className="font-medium">{event.start_time}</dd>
                 </div>
                 <div className="flex justify-between gap-4">
-                  <dt className="text-muted">Local</dt>
+                  <dt className="text-slate-400">Local</dt>
                   <dd className="font-medium text-right">
                     {event.location}
                     {event.city ? ` · ${event.city}` : ""}
@@ -134,9 +134,9 @@ export default function EventPage() {
                 </div>
               </dl>
             </div>
-            <div className="rounded-3xl border border-border bg-card p-6 md:p-8">
+            <div className="rounded-3xl border border-white/10 bg-white/5 border-white/10 shadow-[0_0_20px_rgba(0,123,255,0.05)] p-6 md:p-8">
               <h2 className="text-xl font-bold mb-3">Regulamento</h2>
-              <p className="text-muted leading-relaxed whitespace-pre-line text-sm md:text-base">
+              <p className="text-slate-400 leading-relaxed whitespace-pre-line text-sm md:text-base">
                 {event.regulations || "Regulamento será publicado em breve."}
               </p>
             </div>
@@ -146,10 +146,10 @@ export default function EventPage() {
           <ContactsSection event={event} />
 
           {canBuy && (
-            <div className="fixed bottom-0 inset-x-0 z-40 border-t border-border bg-card/95 backdrop-blur p-3 md:hidden">
+            <div className="fixed bottom-0 inset-x-0 z-40 border-t border-white/10 bg-white/5 border-white/10 shadow-[0_0_20px_rgba(0,123,255,0.05)]/95 backdrop-blur p-3 md:hidden">
               <div className="flex items-center justify-between gap-3 max-w-lg mx-auto">
                 <div>
-                  <p className="text-xs text-muted">Ingresso</p>
+                  <p className="text-xs text-slate-400">Ingresso</p>
                   <p className="font-bold text-lg">
                     {(event.price_cents / 100).toLocaleString("pt-BR", {
                       style: "currency",
@@ -159,7 +159,7 @@ export default function EventPage() {
                 </div>
                 <a
                   href="/comprar"
-                  className="rounded-full bg-brand px-6 py-3 text-sm font-bold text-white"
+                  className="rounded-full bg-[#007BFF] hover:bg-[#0056B3] px-6 py-3 text-sm font-bold text-white"
                 >
                   Comprar
                 </a>
@@ -219,7 +219,7 @@ export default function EventPage() {
             </div>
           )}
 
-          <footer className="border-t border-border py-6 text-center text-xs text-muted pb-24 md:pb-8">
+          <footer className="border-t border-white/10 py-6 text-center text-xs text-slate-400 pb-24 md:pb-8">
             Bilheteria digital · {event.name}
           </footer>
         </>
@@ -310,7 +310,7 @@ function ContactsSection({ event }: { event: EventPublic }) {
   if (!hasAnything) {
     return (
       <section className="mx-auto w-full max-w-6xl px-4 pb-24 md:pb-16">
-        <div className="rounded-3xl border border-border bg-card p-6 text-sm text-muted">
+        <div className="rounded-3xl border border-white/10 bg-white/5 border-white/10 shadow-[0_0_20px_rgba(0,123,255,0.05)] p-6 text-sm text-slate-400">
           Contatos em breve. O organizador preenche na aba{" "}
           <strong>Contatos</strong> do painel.
         </div>
@@ -320,9 +320,9 @@ function ContactsSection({ event }: { event: EventPublic }) {
 
   return (
     <section className="mx-auto w-full max-w-6xl px-4 pb-24 md:pb-16">
-      <div className="rounded-3xl border border-border bg-card p-6 md:p-8">
+      <div className="rounded-3xl border border-white/10 bg-white/5 border-white/10 shadow-[0_0_20px_rgba(0,123,255,0.05)] p-6 md:p-8">
         <h2 className="text-xl font-bold mb-1">Contatos</h2>
-        <p className="text-sm text-muted mb-6">
+        <p className="text-sm text-slate-400 mb-6">
           Fale com a organização · redes e cronometragem
         </p>
 
@@ -331,7 +331,7 @@ function ContactsSection({ event }: { event: EventPublic }) {
             href={event.contact_timing_url}
             target="_blank"
             rel="noopener noreferrer"
-            className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-2xl border-2 border-brand/40 bg-brand/10 px-5 py-4 hover:bg-brand/15 transition"
+            className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-2xl border-2 border-brand/40 bg-[#007BFF] hover:bg-[#0056B3]/10 px-5 py-4 hover:bg-[#007BFF] hover:bg-[#0056B3]/15 transition"
           >
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-brand-soft">
@@ -341,7 +341,7 @@ function ContactsSection({ event }: { event: EventPublic }) {
                 {event.contact_timing_label || "Ver tabela / site oficial"}
               </p>
             </div>
-            <span className="inline-flex rounded-full bg-brand px-4 py-2 text-sm font-bold text-white shrink-0">
+            <span className="inline-flex rounded-full bg-[#007BFF] hover:bg-[#0056B3] px-4 py-2 text-sm font-bold text-white shrink-0">
               Abrir site →
             </span>
           </a>
@@ -356,17 +356,17 @@ function ContactsSection({ event }: { event: EventPublic }) {
                   href={it.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="rounded-xl border border-border bg-card-2 px-3 py-3 hover:border-brand/50 transition"
+                  className="rounded-xl border border-white/10 bg-white/5 border-white/10 shadow-[0_0_20px_rgba(0,123,255,0.05)]-2 px-3 py-3 hover:border-brand/50 transition"
                 >
-                  <p className="text-[11px] text-muted">{it.label}</p>
+                  <p className="text-[11px] text-slate-400">{it.label}</p>
                   <p className="font-medium mt-0.5 break-all">{it.value}</p>
                 </a>
               ) : (
                 <div
                   key={it.label + it.value}
-                  className="rounded-xl border border-border bg-card-2 px-3 py-3"
+                  className="rounded-xl border border-white/10 bg-white/5 border-white/10 shadow-[0_0_20px_rgba(0,123,255,0.05)]-2 px-3 py-3"
                 >
-                  <p className="text-[11px] text-muted">{it.label}</p>
+                  <p className="text-[11px] text-slate-400">{it.label}</p>
                   <p className="font-medium mt-0.5 break-all">{it.value}</p>
                 </div>
               )
@@ -375,7 +375,7 @@ function ContactsSection({ event }: { event: EventPublic }) {
         )}
 
         {event.contact_extra && (
-          <p className="mt-5 text-sm text-muted leading-relaxed whitespace-pre-line">
+          <p className="mt-5 text-sm text-slate-400 leading-relaxed whitespace-pre-line">
             {event.contact_extra}
           </p>
         )}

@@ -1,19 +1,32 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { SiteHeader } from "@/components/SiteHeader";
-import { formatDateBR } from "@/lib/format";
 import type { EventPublic } from "@/lib/types";
+
+import { HomeLayoutOriginal } from "@/components/home-layouts/HomeLayoutOriginal";
+import { HomeLayoutGlass } from "@/components/home-layouts/HomeLayoutGlass";
+import { HomeLayoutMinimal } from "@/components/home-layouts/HomeLayoutMinimal";
+import { HomeLayout3D } from "@/components/home-layouts/HomeLayout3D";
+import { HomeLayoutWide } from "@/components/home-layouts/HomeLayoutWide";
 
 export default function HomePage() {
   const router = useRouter();
   const [events, setEvents] = useState<EventPublic[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [activeLayout, setActiveLayout] = useState<string>("original");
 
   useEffect(() => {
+    // Carregar configuração do layout do site (salvo no Admin)
+    const savedLayout = localStorage.getItem("nexora_site_layout");
+    if (savedLayout) {
+      setActiveLayout(savedLayout);
+    } else {
+      setActiveLayout("wide"); // O mais novo como default
+    }
+
     fetch("/api/event", { cache: "no-store" })
       .then(async (r) => {
         const data = await r.json();
@@ -22,9 +35,8 @@ export default function HomePage() {
         const evs = data.events || [];
         setEvents(evs);
         
-        // Se houver apenas 1 evento, redireciona automaticamente para ele
         if (evs.length === 1) {
-          router.push(`/evento/${evs[0].id}`);
+          router.push(`/evento/\${evs[0].id}`);
         } else {
           setLoading(false);
         }
@@ -36,22 +48,28 @@ export default function HomePage() {
   }, []);
 
   return (
-    <div className="min-h-full flex flex-col bg-[#0b0f19] text-white font-sans">
+    <div className="min-h-full flex flex-col bg-[#020813] text-white font-sans relative overflow-hidden">
+      {/* Background elements */}
+      <div className="absolute top-0 inset-x-0 h-96 bg-gradient-to-b from-[#041630] to-transparent pointer-events-none -z-10" />
+
       <SiteHeader solid={true} />
 
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-16 pb-24">
-        <div className="text-center mb-16">
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tight mb-6">
-            Eventos Disponíveis
+      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-16 pb-24 relative z-10">
+        <div className="text-center mb-16 relative">
+          {/* Subtle glow behind title */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-32 bg-[#007BFF]/20 blur-[100px] rounded-full -z-10" />
+          
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tight mb-6 text-white drop-shadow-lg uppercase">
+            Eventos Nexora
           </h1>
-          <p className="text-slate-400 max-w-2xl mx-auto text-lg md:text-xl">
-            Escolha sua próxima corrida, garanta seu kit e supere seus limites.
+          <p className="text-slate-400 max-w-2xl mx-auto text-lg md:text-xl font-medium">
+            Tecnologia que conecta experiências únicas. Descubra seu próximo evento.
           </p>
         </div>
 
         {loading && (
           <div className="flex justify-center py-20">
-            <p className="text-slate-500 animate-pulse font-medium text-lg">Carregando eventos...</p>
+            <p className="text-[#007BFF] animate-pulse font-bold tracking-widest text-lg uppercase">Carregando eventos...</p>
           </div>
         )}
 
@@ -68,68 +86,14 @@ export default function HomePage() {
         )}
 
         {!loading && !error && events.length > 0 && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {events.map((ev) => {
-              const isClosed = !ev.registration_open || ev.slots_remaining <= 0;
-              const formattedPrice = (ev.price_cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-              
-              return (
-                <Link
-                  key={ev.id}
-                  href={`/evento/${ev.id}`}
-                  className="group relative flex flex-col overflow-hidden rounded-3xl bg-slate-800 transition-all hover:shadow-[0_0_40px_rgba(255,107,0,0.15)] hover:-translate-y-1 h-[400px] w-full"
-                >
-                  {/* Background Image */}
-                  {ev.cover_image_url ? (
-                    <img
-                      src={ev.cover_image_url}
-                      alt={ev.name}
-                      className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-                    />
-                  ) : (
-                    <div className="absolute inset-0 flex items-center justify-center bg-slate-800 text-slate-500">
-                      Sem Foto
-                    </div>
-                  )}
-
-                  {/* Gradient Overlay for Text Readability */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#0b0f19] via-[#0b0f19]/80 to-transparent opacity-90" />
-                  <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors duration-500" />
-
-                  {/* Content inside the card */}
-                  <div className="relative flex flex-1 flex-col justify-end p-8 h-full z-10">
-                    <div className="flex items-center gap-3 mb-3">
-                      <span className="text-xs font-bold uppercase tracking-wider text-brand bg-brand/10 px-3 py-1 rounded-full backdrop-blur-md">
-                        {formatDateBR(ev.event_date)}
-                      </span>
-                      <span className="text-xs font-semibold text-slate-300 bg-white/5 px-3 py-1 rounded-full backdrop-blur-md">
-                        {ev.city}
-                      </span>
-                    </div>
-                    
-                    <h2 className="text-3xl md:text-4xl font-black leading-tight mb-2 text-white group-hover:text-brand transition-colors duration-300">
-                      {ev.name}
-                    </h2>
-
-                    <p className="text-sm text-slate-400 line-clamp-2 mb-6 max-w-[80%]">
-                      {ev.description || "Garanta já a sua vaga neste grande evento. As inscrições são limitadas."}
-                    </p>
-                    
-                    <div className="mt-auto flex items-center justify-between">
-                      {isClosed ? (
-                        <span className="rounded-full bg-red-500/20 border border-red-500/50 px-6 py-2.5 text-sm font-bold text-red-400 uppercase tracking-wider backdrop-blur-md">
-                          Esgotado
-                        </span>
-                      ) : (
-                        <span className="rounded-full bg-brand hover:bg-brand-dark shadow-lg shadow-brand/20 text-white px-6 py-3 text-sm font-bold transition-all flex items-center gap-2 group-hover:scale-105">
-                          Inscrever-se <span className="opacity-50">|</span> {formattedPrice}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </Link>
-              );
-            })}
+          <div className="relative">
+            {activeLayout === "glass" && <HomeLayoutGlass events={events} />}
+            {activeLayout === "minimal" && <HomeLayoutMinimal events={events} />}
+            {activeLayout === "3d" && <HomeLayout3D events={events} />}
+            {activeLayout === "wide" && <HomeLayoutWide events={events} />}
+            {(activeLayout === "original" || !["glass", "minimal", "3d", "wide"].includes(activeLayout)) && (
+              <HomeLayoutOriginal events={events} />
+            )}
           </div>
         )}
       </main>

@@ -577,6 +577,7 @@ export default function AdminPage() {
 
 
   const NAV = [
+  { id: "layout", label: "Layout da Vitrine", icon: "✨" },
   { id: "resumo", label: "Resumo", icon: "📊" },
   { id: "evento", label: "Eventos", icon: "≡" },
   { id: "visual", label: "Layout", icon: "✨" },
@@ -2088,6 +2089,64 @@ function ShirtBars({
           </button>
         );
       })}
+    </div>
+  );
+}
+
+
+function AdminLayoutTab({ onMessage }: { onMessage: (m: string, e: string | null) => void }) {
+  const [layout, setLayout] = useState("wide");
+
+  useEffect(() => {
+    const saved = localStorage.getItem("nexora_site_layout");
+    if (saved) setLayout(saved);
+  }, []);
+
+  const saveLayout = (l: string) => {
+    setLayout(l);
+    localStorage.setItem("nexora_site_layout", l);
+    onMessage("Layout da Vitrine salvo com sucesso!", null);
+  };
+
+  const layouts = [
+    { id: "wide", name: "Eventos Nexora (Wide)", desc: "Estilo horizontal expansivo com botão inferior" },
+    { id: "glass", name: "Glassmorphism", desc: "Cartões translúcidos com neon azul de fundo" },
+    { id: "minimal", name: "Minimalista Tech", desc: "Design limpo, linhas finas e visual ultra organizado" },
+    { id: "3d", name: "Imersão 3D", desc: "Eventos em cards flutuantes com sombras chamativas" },
+    { id: "original", name: "Original / Clássico", desc: "Layout antigo padronizado" }
+  ];
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-xl font-bold text-white mb-2">Layout da Página Inicial</h2>
+        <p className="text-slate-400">
+          Escolha como os eventos serão apresentados na capa do seu site (Vitrine). 
+          Esta configuração é salva no seu navegador para demonstração.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {layouts.map(l => (
+          <div 
+            key={l.id} 
+            onClick={() => saveLayout(l.id)}
+            className={`cursor-pointer rounded-2xl p-6 border-2 transition-all ${layout === l.id ? 'border-[#007BFF] bg-[#007BFF]/10' : 'border-white/10 bg-white/5 hover:border-white/30'}`}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-bold text-lg text-white">{l.name}</h3>
+              {layout === l.id && <span className="bg-[#007BFF] text-white text-xs px-2 py-1 rounded font-bold uppercase">Ativo</span>}
+            </div>
+            <p className="text-sm text-slate-400">{l.desc}</p>
+          </div>
+        ))}
+      </div>
+      
+      <div className="mt-8">
+        <a href="/" target="_blank" className="inline-block bg-[#007BFF] text-white px-6 py-3 rounded-xl font-bold hover:bg-[#0056B3]">
+          Abrir Vitrine para Conferir
+        </a>
+      </div>
     </div>
   );
 }
