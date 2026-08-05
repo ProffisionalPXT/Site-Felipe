@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { checkAdminPassword } from "@/lib/admin-auth";
 import { getDemoRegistrations, getDemoEvent, isDemoMode } from "@/lib/demo-data";

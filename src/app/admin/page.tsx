@@ -230,7 +230,7 @@ export default function AdminPage() {
         if (sh && sh !== "all") params.set("shirt", sh);
         
         let targetEventId = selectedEventId;
-        const evListRes = await fetch("/api/event");
+        const evListRes = await fetch("/api/event", { cache: "no-store" });
         const evListData = await evListRes.json();
         const availableEvents = evListData.events || [];
         setEvents(availableEvents);

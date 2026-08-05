@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { checkAdminPassword } from "@/lib/admin-auth";
 import { isDemoMode } from "@/lib/demo-data";
@@ -54,7 +55,7 @@ export async function POST(req: NextRequest) {
     const mockImage = {
       id: crypto.randomUUID(),
       event_id: ev?.id || "demo",
-      url: "https://images.unsplash.com/photo-1452626038306-9aae5e071dd3?auto=format&fit=crop&w=1200&q=80",
+      url: `https://picsum.photos/1200/800?random=${Date.now()}`,
       storage_path: "demo/mock.jpg",
       caption: "Foto adicionada",
       sort_order: (ev?.images || []).length,

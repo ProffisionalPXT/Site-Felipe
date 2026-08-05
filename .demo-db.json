@@ -2,6 +2,86 @@
   "events": [
     {
       "id": "00000000-0000-4000-8000-000000000001",
+      "name": "CORRIDA MATINAL",
+      "description": "",
+      "regulations": "",
+      "event_date": "2026-09-20",
+      "start_time": "07:00",
+      "location": "",
+      "city": "",
+      "price_cents": 8900,
+      "max_slots": 500,
+      "registration_open": true,
+      "cover_image_url": "https://images.unsplash.com/photo-1452626038306-9aae5e071dd3?auto=format&fit=crop&w=1600&q=80",
+      "categories": [
+        "5K"
+      ],
+      "shirt_sizes": [
+        "P"
+      ],
+      "theme_layout": "bilheteria",
+      "theme_font": "geist",
+      "theme_color": "laranja",
+      "contact_email": "",
+      "contact_whatsapp": "",
+      "contact_phone": "",
+      "contact_instagram": "",
+      "contact_facebook": "",
+      "contact_youtube": "",
+      "contact_tiktok": "",
+      "contact_timing_url": "",
+      "contact_timing_label": "Cronometragem e percursos",
+      "contact_kit_email": "",
+      "contact_extra": "",
+      "created_at": "2026-08-05T12:02:10.333Z",
+      "slots_remaining": 328,
+      "paid_count": 116,
+      "pending_count": 56,
+      "images": [
+        {
+          "id": "img-1",
+          "event_id": "00000000-0000-4000-8000-000000000001",
+          "url": "https://images.unsplash.com/photo-1452626038306-9aae5e071dd3?auto=format&fit=crop&w=1200&q=80",
+          "storage_path": "demo/1.jpg",
+          "caption": "Largada",
+          "sort_order": 0,
+          "is_cover": true,
+          "created_at": "2026-08-05T12:02:10.333Z"
+        },
+        {
+          "id": "img-2",
+          "event_id": "00000000-0000-4000-8000-000000000001",
+          "url": "https://images.unsplash.com/photo-1476480862126-209bfaa8edc8?auto=format&fit=crop&w=1200&q=80",
+          "storage_path": "demo/2.jpg",
+          "caption": "Percurso",
+          "sort_order": 1,
+          "is_cover": false,
+          "created_at": "2026-08-05T12:02:10.333Z"
+        },
+        {
+          "id": "img-3",
+          "event_id": "00000000-0000-4000-8000-000000000001",
+          "url": "https://images.unsplash.com/photo-1552674605-db6ffd4facb5?auto=format&fit=crop&w=1200&q=80",
+          "storage_path": "demo/3.jpg",
+          "caption": "Atletas",
+          "sort_order": 2,
+          "is_cover": false,
+          "created_at": "2026-08-05T12:02:10.333Z"
+        },
+        {
+          "id": "img-4",
+          "event_id": "00000000-0000-4000-8000-000000000001",
+          "url": "https://images.unsplash.com/photo-1571008887538-b36bb32f4571?auto=format&fit=crop&w=1200&q=80",
+          "storage_path": "demo/4.jpg",
+          "caption": "Chegada",
+          "sort_order": 3,
+          "is_cover": false,
+          "created_at": "2026-08-05T12:02:10.333Z"
+        }
+      ]
+    },
+    {
+      "id": "1bac4535-8275-4ba9-9c45-2a0e5e569349",
       "name": "Corrida Noturna da Cidade 2026",
       "description": "Uma noite de energia, música e superação. Percurso iluminado, kit premium com camiseta dry-fit, medalha finisher e hidratação nos postos.\n\nIdeal para quem quer viver a emoção de uma corrida com estrutura profissional — do tipo bilheteria digital, simples e rápido de garantir a vaga.",
       "regulations": "• Idade mínima: 16 anos (menores com autorização).\n• Inscrição pessoal e intransferível.\n• Uso de fone de ouvido sob responsabilidade do atleta.\n• Kit deve ser retirado no local nos dias informados pelo organizador.\n• Em caso de chuva o evento ocorre normalmente, salvo determinação oficial.",

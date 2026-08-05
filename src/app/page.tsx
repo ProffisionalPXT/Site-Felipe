@@ -14,7 +14,7 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/event")
+    fetch("/api/event", { cache: "no-store" })
       .then(async (r) => {
         const data = await r.json();
         if (!r.ok) throw new Error(data.error || "Erro ao carregar");
